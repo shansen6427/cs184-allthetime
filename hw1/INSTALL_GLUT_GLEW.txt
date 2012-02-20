@@ -1,0 +1,7 @@
+download GLUT+GLEW.zip
+copy and paste the files under Lib and Include to 
+C:\Program Files\Microsoft SDKs\Windows\v7.0A
+or
+C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A
+
+also put Dll under your DEBUG or RELEASE directory
