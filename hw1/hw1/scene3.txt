@@ -1,0 +1,68 @@
+# Scene description.
+# Lights are position (4), color (4) 
+# Materials are defined for each object
+# Scene File for Demo program 
+
+# Set the scene size and camera location 
+size 500 500
+camera 0 -2 2 0 0 0 0 1 1 30.0
+
+# lights.  A single point and directional light
+# Note that your program must support up to 10 lights
+light 0.6 0 0.1 0 1 0.5 0 1  
+light 0 -0.6 0.1 1 0.5 0.5 1 1
+light 0.2 0.5 1 0 1 0 1 1
+light 1 0 0.6 1 .5 .5 .5 1
+
+# I do a global transfo	rm to move this down a little 
+# A good use of matrix stacks and hierarchy 
+pushTransform 
+translate 0 0 -0.4
+
+# Teapot
+# Materials first 
+  ambient 0.2 0.5 0.2 1 
+  diffuse 0.5 0.5 0.5 1
+  specular 1 1 .5 1
+  shininess 100
+# Do all object transforms within a push/pop
+  pushTransform
+        translate 0 0 0.2 
+        rotate 1 0 0 45 
+        teapot 0.25
+  popTransform
+
+
+# Pillar 1 
+  diffuse 1 .25 0.25 1
+  specular 0.8 0 0 1  
+  pushTransform 
+        translate -0.4 -0.4 0
+# Sphere on top, Note hierarchical push/pop
+        pushTransform 
+            translate 0 0 0.6 
+            sphere 0.1
+        popTransform
+        scale 0.2 0.2 .7
+        translate 0 0 0.5
+        cube 1.0 
+  popTransform
+
+# Pillar 2
+  diffuse .25 .25 1.0 1 
+  specular 0 0.8 0 1
+  pushTransform 
+       translate 0.4 0.4 0
+# Sphere on top, Note hierarchical push/pop
+        pushTransform 
+            translate 0 0 0.6 
+            sphere 0.1
+        popTransform
+        scale 0.2 0.2 .7
+        translate 0 0 0.5
+        cube 1.0 
+  popTransform
+
+# Undo global transform
+popTransform
+
