@@ -22,6 +22,7 @@ int amount; // The amount of rotation for each arrow press
 vec3 eye; // The (regularly updated) vector coordinates of the eye location 
 vec3 up;  // The (regularly updated) vector coordinates of the up location 
 vec3 center;
+vec3 eye_center; // The (regularly updated) vector coordinates of the eye lookat location
 const vec3 eyeinit(0.0,0.0,5.0) ; // Initial eye position, also for resets
 const vec3 upinit(0.0,1.0,0.0) ; // Initial up position, also for resets
 const vec3 centerinit(0.0,0.0,0.0) ; 
@@ -33,10 +34,13 @@ GLuint vertexshader, fragmentshader, shaderprogram ; // shaders
 static enum {view, translate, scale} transop ; // which operation to transform by 
 float sx, sy ; // the scale in x and y 
 float tx, ty ; // the translation in x and y
+float eye_dp; // the translation in the eye lookat direction
 vec3 resetEye ;
 vec3 resetUp ;
 vec3 resetCenter ;
 float resetFovy ;
+
+bool alt_controls;  // if true, use ghost camera
 
 // Variables for geometry and transforms
 int tess = 20 ;
@@ -130,6 +134,7 @@ void resetAll() {
 	eye = resetEye ; 
 	up = resetUp ; 
 	center = resetCenter ;
+	eye_center = resetCenter ;
 	fovy = resetFovy ;
     sx = sy = 1.0 ; 
     tx = ty = 0.0 ;
@@ -195,6 +200,64 @@ void keyboard(unsigned char key, int x, int y) {
 
 				std::cout << "Light " << selectedLight << " selected for rotation\n";
 		}
+	}
+	glutPostRedisplay();
+}
+
+/**
+ *  The controls for the roaming camera.  These are currently only usable as an alternative
+ * to the hw2 controls.  Activated when alt_controls = true.  The current controls are:
+ * w: move in the direction the camera is currently looking
+ * s: move in the opposite direction from which the camera is currently looking
+ * a: move to the left of the direction the camera is currently looking
+ * d: move to the right of the direction the camera is currently looking
+ */
+void altkeyboard(unsigned char key, int x, int y){
+	mat4 translate_matrix;
+	vec3 translate_vec; 
+	vec4 eye4 = vec4(eye, 1.0), eye_center4(eye_center, 1.0);
+	vec3 w_vec, u_vec;
+	switch(key){
+		case 'w':
+			translate_vec = glm::normalize(vec3((eye_center.x - eye.x), (eye_center.y - eye.y), (eye_center.z - eye.z)));
+			translate_matrix = Transform::translate(translate_vec.x * eye_dp, translate_vec.y * eye_dp, translate_vec.z * eye_dp);
+			eye4 = eye4 * translate_matrix;
+			eye_center4 = eye_center4 * translate_matrix;
+			eye.x = eye4.x;  eye.y = eye4.y; eye.z = eye4.z;
+			eye_center.x = eye_center4.x; eye_center.y = eye_center4.y; eye_center.z = eye_center4.z;
+			break;
+		case 's':
+			translate_vec = glm::normalize(vec3((eye_center.x - eye.x), (eye_center.y - eye.y), (eye_center.z - eye.z)));
+			translate_vec = -translate_vec;
+			translate_matrix = Transform::translate(translate_vec.x * eye_dp, translate_vec.y * eye_dp, translate_vec.z * eye_dp);
+			eye4 = eye4 * translate_matrix;
+			eye_center4 = eye_center4 * translate_matrix;
+			eye.x = eye4.x;  eye.y = eye4.y; eye.z = eye4.z;
+			eye_center.x = eye_center4.x; eye_center.y = eye_center4.y; eye_center.z = eye_center4.z;
+			break;
+		case 'a':
+		    // Using the up vector create a left vector
+			w_vec = glm::normalize(eye - eye_center);
+			u_vec = glm::normalize(glm::cross(up,w_vec));
+			u_vec = -u_vec;
+
+			translate_matrix = Transform::translate(u_vec.x * eye_dp, u_vec.y * eye_dp, u_vec.z * eye_dp);
+			eye4 = eye4 * translate_matrix;
+			eye_center4 = eye_center4 * translate_matrix;
+			eye.x = eye4.x;  eye.y = eye4.y; eye.z = eye4.z;
+			eye_center.x = eye_center4.x; eye_center.y = eye_center4.y; eye_center.z = eye_center4.z;
+			break;
+		case 'd':
+			// Using the up vector create a right vector
+			w_vec = glm::normalize(eye - eye_center);
+			u_vec = glm::normalize(glm::cross(up,w_vec));
+
+			translate_matrix = Transform::translate(u_vec.x * eye_dp, u_vec.y * eye_dp, u_vec.z * eye_dp);
+			eye4 = eye4 * translate_matrix;
+			eye_center4 = eye_center4 * translate_matrix;
+			eye.x = eye4.x;  eye.y = eye4.y; eye.z = eye4.z;
+			eye_center.x = eye_center4.x; eye_center.y = eye_center4.y; eye_center.z = eye_center4.z;
+			break;
 	}
 	glutPostRedisplay();
 }
@@ -272,9 +335,13 @@ void init() {
 	eye = eyeinit ; 
 	up = upinit ; 
 	center = centerinit ;
+	eye_center = centerinit;
+
 	amount = 5;
     sx = sy = 1.0 ; 
     tx = ty = 0.0 ;
+	eye_dp = 0.05;
+
 	useGlu = false;
 	zNear = 0.1 ;
 	zFar = 99.0 ;
@@ -282,6 +349,8 @@ void init() {
 
 	numLightsOn = 0 ;
 	selectedLight = -1 ;
+
+	alt_controls = true;
 
 	// Initialize the stack
 	transfstack.push(mat4(1.0)) ;
@@ -324,7 +393,11 @@ void display() {
 
     if (useGlu) mv = glm::lookAt(eye,center,up) ; 
 	else {
-          mv = Transform::lookAt(eye,center,up) ; 
+		  if(alt_controls){
+			mv = Transform::lookAt(eye,eye_center,up) ;
+		  }else{
+			mv = Transform::lookAt(eye,center,up) ;
+		  }
           mv = glm::transpose(mv) ; // accounting for row major
         }
     glLoadMatrixf(&mv[0][0]) ; 
@@ -425,6 +498,8 @@ void execute(std::string cmd, std::vector<std::string> params) {
 		for (int i = 0; i < 10; i++) cam[i] = atof(params[i].c_str()) ;
 		eye = vec3(cam[0], cam[1], cam[2]) ;
 		center = vec3(cam[3], cam[4], cam[5]) ;
+		eye_center = center;
+
 		up = glm::normalize(vec3(cam[6], cam[7], cam[8])) ;
 		fovy = cam[9] ;
 		resetEye = eye ;
@@ -542,7 +617,11 @@ int main(int argc, char* argv[]) {
 	parse(argv[1]);
 	glutDisplayFunc(display);
 	glutSpecialFunc(specialKey);
-	glutKeyboardFunc(keyboard);
+	if(alt_controls){
+		glutKeyboardFunc(altkeyboard);
+	}else{
+		glutKeyboardFunc(keyboard);
+	}
 	glutReshapeFunc(reshape);
 	glutReshapeWindow(600, 400);
 	printHelp();

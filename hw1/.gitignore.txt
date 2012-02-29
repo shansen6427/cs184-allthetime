@@ -7,3 +7,4 @@ doc/
 *~
 .project
 .DS_Store
+hw1/Debug/*log
