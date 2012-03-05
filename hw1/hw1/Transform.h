@@ -30,6 +30,7 @@ public:
 	static void zoom(float dist, vec3& eye, vec3& center);
 	// MICE
 	// CONTROL
+	static void centeralign(vec3 eye, vec3 move_center, vec3& center, vec3& up, float speed);
 	static void moveleft(float degrees, vec3 eye, vec3& move_center);
 	// CONTROL
 	static void up(float degrees, vec3& eye, vec3& center, vec3& up);

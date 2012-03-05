@@ -87,6 +87,8 @@ float move_amount ;
 float turn_amount ;
 vec3 forward_dir ;
 vec3 move_center ;
+bool align_flag ;
+bool aligned ;
 // CONTROL 2
 
 // New helper transformation function to transform vector by modelview 
@@ -230,6 +232,21 @@ void keyboard(unsigned char key, int x, int y) {
 	glutPostRedisplay();
 }
 
+void alignTimer(int value) {
+	glutPostRedisplay() ;
+	// std::cout << "Value " << value << std::endl;
+	if (value > 0) {
+		Transform::centeralign(eye, move_center, center, up, value) ;
+		// std::cout << "Calling new timer" << std::endl ;
+		glutTimerFunc(1, alignTimer, value - 1) ;
+	} else {
+		// QPrint::v3p("Final center ", center) ;
+		// QPrint::v3p("Move_center ", move_center) ;
+		center = move_center ;
+		aligned = true ;
+	}
+}
+
 /**
  *  The controls for the roaming camera.  These are currently only usable as an alternative
  * to the hw2 controls.  Activated when alt_controls = true.  The current controls are:
@@ -239,17 +256,28 @@ void keyboard(unsigned char key, int x, int y) {
  * d: move to the right of the direction the camera is currently looking
  */
 void altkeyboard(unsigned char key, int x, int y){
-	/*
-	mat4 translate_matrix;
-	vec3 translate_vec; 
-	vec4 eye4 = vec4(eye, 1.0), eye_center4(eye_center, 1.0);
-	vec3 w_vec, u_vec;
-	*/
 	vec3 worldUp = vec3(0.0, 0.0, 1.0) ;
 	vec3 move_vec = move_center - eye ;
 	vec3 forward_dir = glm::normalize(vec3(move_vec[0], move_vec[1], 0.0)) ;
 	vec3 cross_vec = glm::cross(move_vec, worldUp) ;
 	vec3 side_dir = glm::normalize(vec3(cross_vec[0], cross_vec[1], 0.0)) ;
+	
+	vec3 eye_from_m = move_center - eye ;
+	vec3 eye_from_c = center - eye ;
+	float dotP = glm::dot(eye_from_m, eye_from_c) / (QPrint::magv(eye_from_m) * QPrint::magv(eye_from_c)) ;
+	
+	// Animate the camera
+	float min_dot = 1.0 ;
+	int steps = 50 ; // Increase for smoother alignment
+	if (dotP < min_dot && align_flag){
+		glutTimerFunc(0, alignTimer, steps);
+		align_flag = false ;
+		aligned = false ;
+	}
+
+	// std::cout << "DOT " << dotP << std::endl ;
+	// QPrint::v3p("Move_center ", move_center) ;
+	// QPrint::v3p("Center ", center) ;
 	if (transop == zoom) {
 		switch(key) {
 		case 'v':
@@ -265,15 +293,6 @@ void altkeyboard(unsigned char key, int x, int y){
 		case 'w':
 			eye += move_amount * forward_dir ;
 			move_center += move_amount * forward_dir ;
-			/*
-			translate_vec = glm::normalize(vec3((eye_center.x - eye.x), (eye_center.y - eye.y), (eye_center.z - eye.z)));
-			translate_matrix = Transform::translate(translate_vec.x * eye_dp, translate_vec.y * eye_dp, translate_vec.z * eye_dp);
-			eye4 = eye4 * translate_matrix;
-			eye_center4 = eye_center4 * translate_matrix;
-			eye.x = eye4.x;  eye.y = eye4.y; eye.z = eye4.z;
-			eye_center.x = eye_center4.x; eye_center.y = eye_center4.y; eye_center.z = eye_center4.z;
-			break;
-			*/
 			break ;
 		case 's':
 			eye -= move_amount * forward_dir ;
@@ -301,7 +320,8 @@ void altkeyboard(unsigned char key, int x, int y){
 			break ;
 		}
 
-		if (key != 'z') {
+		if (key != 'z' && aligned) {
+			// std::cout << "DOING THIS" << std::endl ;
 			up = worldUp ;
 			center = move_center ;
 			saveResets() ;
@@ -385,6 +405,7 @@ void mouse(int button, int state, int x, int y) {
 		if (button == GLUT_LEFT_BUTTON) {
 			mouseoldx = x ;
 			mouseoldy = y ;
+			align_flag = true ;
 		} else if (button == GLUT_RIGHT_BUTTON) {
 			resetCamera() ;
 			glutPostRedisplay() ;
@@ -432,9 +453,10 @@ void init() {
 	alt_controls = true ;
 
 	// CONTROL 2
-	move_amount = 0.2;
-	turn_amount = 3.0;
-	move_center = vec3(0.0, 2.0, 1.0);
+	move_amount = 0.2 ;
+	turn_amount = 3.0 ;
+	move_center = vec3(0.0, 2.0, 1.0) ;
+	align_flag = true ;
 
 	numLightsOn = 0 ;
 	selectedLight = -1 ;
@@ -477,6 +499,9 @@ void display() {
 
 	glMatrixMode(GL_MODELVIEW);
 	mat4 mv ;
+
+	// QPrint::v3p("DISPLAY C ", center) ;
+	// QPrint::v3p("DISPLAY M ", move_center) ;
 
     if (useGlu) mv = glm::lookAt(eye,center,up) ; 
 	else {
