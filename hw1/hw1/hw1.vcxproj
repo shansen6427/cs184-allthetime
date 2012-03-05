@@ -89,6 +89,7 @@
   <ItemGroup>
     <ClCompile Include="hw1.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="objReader.cpp" />
     <ClCompile Include="shaders.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -97,6 +98,7 @@
     <ClCompile Include="Transform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="objReader.h" />
     <ClInclude Include="shaders.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />

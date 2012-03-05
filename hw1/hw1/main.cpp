@@ -16,6 +16,7 @@
 #include <GL/glut.h>
 #include "shaders.h"
 #include "Transform.h"
+#include "objReader.h"
 
 int amount; // The amount of rotation for each arrow press
 
@@ -74,6 +75,9 @@ GLuint diffuse ;
 GLuint specular ; 
 GLuint emission ;
 GLuint shininess ; 
+
+// file variables
+objReader obj;
 
 // New helper transformation function to transform vector by modelview 
 // May be better done using newer glm functionality.
@@ -212,7 +216,7 @@ void keyboard(unsigned char key, int x, int y) {
  * a: move to the left of the direction the camera is currently looking
  * d: move to the right of the direction the camera is currently looking
  */
-void altkeyboard(unsigned char key, int x, int y){
+void altKeyboard(unsigned char key, int x, int y){
 	mat4 translate_matrix;
 	vec3 translate_vec; 
 	vec4 eye4 = vec4(eye, 1.0), eye_center4(eye_center, 1.0);
@@ -350,7 +354,10 @@ void init() {
 	numLightsOn = 0 ;
 	selectedLight = -1 ;
 
-	alt_controls = true;
+	alt_controls = false;
+
+	// initialize .obj reader
+	obj.init("no file yet.obj");
 
 	// Initialize the stack
 	transfstack.push(mat4(1.0)) ;
@@ -451,6 +458,8 @@ void display() {
 				glutSolidCube(size) ;
 			}
 		}
+
+		obj.draw();
 
 	glutSwapBuffers();
 }
@@ -618,7 +627,7 @@ int main(int argc, char* argv[]) {
 	glutDisplayFunc(display);
 	glutSpecialFunc(specialKey);
 	if(alt_controls){
-		glutKeyboardFunc(altkeyboard);
+		glutKeyboardFunc(altKeyboard);
 	}else{
 		glutKeyboardFunc(keyboard);
 	}
