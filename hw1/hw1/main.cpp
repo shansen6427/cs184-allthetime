@@ -17,13 +17,13 @@
 #include "shaders.h"
 #include "Transform.h"
 #include "objReader.h"
+#include "QPrint.h"
 
 int amount; // The amount of rotation for each arrow press
 
 vec3 eye; // The (regularly updated) vector coordinates of the eye location 
 vec3 up;  // The (regularly updated) vector coordinates of the up location 
 vec3 center;
-vec3 eye_center; // The (regularly updated) vector coordinates of the eye lookat location
 const vec3 eyeinit(0.0,0.0,5.0) ; // Initial eye position, also for resets
 const vec3 upinit(0.0,1.0,0.0) ; // Initial up position, also for resets
 const vec3 centerinit(0.0,0.0,0.0) ; 
@@ -32,19 +32,16 @@ int w, h; // width and height
 float zNear, zFar ;
 float fovy ;
 GLuint vertexshader, fragmentshader, shaderprogram ; // shaders
-static enum {view, translate, scale} transop ; // which operation to transform by 
+static enum {view, translate, scale, zoom} transop ; // which operation to transform by 
 float sx, sy ; // the scale in x and y 
 float tx, ty ; // the translation in x and y
-float eye_dp; // the translation in the eye lookat direction
 vec3 resetEye ;
 vec3 resetUp ;
 vec3 resetCenter ;
 float resetFovy ;
 
-bool alt_controls;  // if true, use ghost camera
-
 // Variables for geometry and transforms
-int tess = 20 ;
+const int tess = 20 ;
 float ambientState[] = {0.0, 0.0, 0.0, 1.0} ;
 float diffuseState[] = {0.0, 0.0, 0.0, 1.0} ;
 float specularState[] = {0.0, 0.0, 0.0, 1.0} ;
@@ -74,7 +71,24 @@ GLuint ambient ;
 GLuint diffuse ; 
 GLuint specular ; 
 GLuint emission ;
-GLuint shininess ; 
+GLuint shininess ;
+
+// MICE
+int mouseoldx, mouseoldy ;
+// MICE
+
+// CONTROL
+bool alt_controls ;
+float eye_dp; // the translation in the eye lookat direction
+vec3 eye_center; // The (regularly updated) vector coordinates of the eye lookat location
+// CONTROL
+
+// CONTROL2
+float move_amount ;
+float turn_amount ;
+vec3 forward_dir ;
+vec3 move_center ;
+// CONTROL 2
 
 // file variables
 objReader obj;
@@ -138,7 +152,6 @@ void resetAll() {
 	eye = resetEye ; 
 	up = resetUp ; 
 	center = resetCenter ;
-	eye_center = resetCenter ;
 	fovy = resetFovy ;
     sx = sy = 1.0 ; 
     tx = ty = 0.0 ;
@@ -150,6 +163,18 @@ void resetAll() {
 			lightPosition[i][j] = resetLightPos[i][j] ;
 		}
 	}
+}
+
+void resetCamera() {
+	eye = resetEye ;
+	center = resetCenter ;
+	up = resetUp ;
+}
+
+void saveResets() {
+	resetEye = eye ;
+	resetCenter = center ;
+	resetUp = up ;
 }
 
 void keyboard(unsigned char key, int x, int y) {
@@ -188,6 +213,7 @@ void keyboard(unsigned char key, int x, int y) {
     case 's':
         transop = scale ; 
         std::cout << "Operation is set to Scale\n" ; 
+		break ;
 	case '0': case '1': case '2': case '3': case '4':
 	case '5': case '6': case '7': case '8': case '9':
 		if(key - 48 >= numLightsOn){
@@ -221,8 +247,28 @@ void altKeyboard(unsigned char key, int x, int y){
 	vec3 translate_vec; 
 	vec4 eye4 = vec4(eye, 1.0), eye_center4(eye_center, 1.0);
 	vec3 w_vec, u_vec;
-	switch(key){
+	*/
+	vec3 worldUp = vec3(0.0, 0.0, 1.0) ;
+	vec3 move_vec = move_center - eye ;
+	vec3 forward_dir = glm::normalize(vec3(move_vec[0], move_vec[1], 0.0)) ;
+	vec3 cross_vec = glm::cross(move_vec, worldUp) ;
+	vec3 side_dir = glm::normalize(vec3(cross_vec[0], cross_vec[1], 0.0)) ;
+	if (transop == zoom) {
+		switch(key) {
+		case 'v':
+			transop = view ;
+			resetCamera() ;
+			std::cout << "Operation is set to View\n" ;
+			break ;
+		default:
+			break ;
+		}
+	} else if (transop == view) {
+		switch(key){
 		case 'w':
+			eye += move_amount * forward_dir ;
+			move_center += move_amount * forward_dir ;
+			/*
 			translate_vec = glm::normalize(vec3((eye_center.x - eye.x), (eye_center.y - eye.y), (eye_center.z - eye.z)));
 			translate_matrix = Transform::translate(translate_vec.x * eye_dp, translate_vec.y * eye_dp, translate_vec.z * eye_dp);
 			eye4 = eye4 * translate_matrix;
@@ -230,39 +276,41 @@ void altKeyboard(unsigned char key, int x, int y){
 			eye.x = eye4.x;  eye.y = eye4.y; eye.z = eye4.z;
 			eye_center.x = eye_center4.x; eye_center.y = eye_center4.y; eye_center.z = eye_center4.z;
 			break;
+			*/
+			break ;
 		case 's':
-			translate_vec = glm::normalize(vec3((eye_center.x - eye.x), (eye_center.y - eye.y), (eye_center.z - eye.z)));
-			translate_vec = -translate_vec;
-			translate_matrix = Transform::translate(translate_vec.x * eye_dp, translate_vec.y * eye_dp, translate_vec.z * eye_dp);
-			eye4 = eye4 * translate_matrix;
-			eye_center4 = eye_center4 * translate_matrix;
-			eye.x = eye4.x;  eye.y = eye4.y; eye.z = eye4.z;
-			eye_center.x = eye_center4.x; eye_center.y = eye_center4.y; eye_center.z = eye_center4.z;
-			break;
+			eye -= move_amount * forward_dir ;
+			move_center -= move_amount * forward_dir ;
+			break ;
 		case 'a':
-		    // Using the up vector create a left vector
-			w_vec = glm::normalize(eye - eye_center);
-			u_vec = glm::normalize(glm::cross(up,w_vec));
-			u_vec = -u_vec;
-
-			translate_matrix = Transform::translate(u_vec.x * eye_dp, u_vec.y * eye_dp, u_vec.z * eye_dp);
-			eye4 = eye4 * translate_matrix;
-			eye_center4 = eye_center4 * translate_matrix;
-			eye.x = eye4.x;  eye.y = eye4.y; eye.z = eye4.z;
-			eye_center.x = eye_center4.x; eye_center.y = eye_center4.y; eye_center.z = eye_center4.z;
-			break;
+			Transform::moveleft(turn_amount, eye, move_center) ;
+			break ;
 		case 'd':
-			// Using the up vector create a right vector
-			w_vec = glm::normalize(eye - eye_center);
-			u_vec = glm::normalize(glm::cross(up,w_vec));
-
-			translate_matrix = Transform::translate(u_vec.x * eye_dp, u_vec.y * eye_dp, u_vec.z * eye_dp);
-			eye4 = eye4 * translate_matrix;
-			eye_center4 = eye_center4 * translate_matrix;
-			eye.x = eye4.x;  eye.y = eye4.y; eye.z = eye4.z;
-			eye_center.x = eye_center4.x; eye_center.y = eye_center4.y; eye_center.z = eye_center4.z;
+			Transform::moveleft(-turn_amount, eye, move_center) ;
 			break;
+		case 'q':
+			eye -= move_amount * side_dir ;
+			move_center -= move_amount * side_dir ;
+			break;
+		case 'e':
+			eye += move_amount * side_dir ;
+			move_center += move_amount * side_dir ;
+			break;
+		case 'z':
+			transop = zoom ;
+			std::cout << "Operation is set to Zoom\n" ;
+			break ;
+		default:
+			break ;
+		}
+
+		if (key != 'z') {
+			up = worldUp ;
+			center = move_center ;
+			saveResets() ;
+		}
 	}
+	
 	glutPostRedisplay();
 }
 
@@ -331,6 +379,42 @@ void specialKey(int key, int x, int y) {
 	glutPostRedisplay();
 }
 
+
+// MICE
+const GLuint GLUT_SCROLL_UP = 3 ;
+const GLuint GLUT_SCROLL_DOWN = 4 ;
+void mouse(int button, int state, int x, int y) {
+	if (state == GLUT_DOWN) {
+		if (button == GLUT_LEFT_BUTTON) {
+			mouseoldx = x ;
+			mouseoldy = y ;
+		} else if (button == GLUT_RIGHT_BUTTON) {
+			resetCamera() ;
+			glutPostRedisplay() ;
+		}
+	}
+}
+
+void mousedrag(int x, int y) {
+	int xloc = x - mouseoldx ;
+	int yloc = y - mouseoldy ;
+	float turnAmount = .1 ;
+	float zoomAmount = .03 ;
+
+	if (transop == view) {
+		Transform::centerleft(turnAmount * xloc, eye, center, up) ;
+		Transform::centerup(-turnAmount * yloc, eye, center, up) ;
+	} else if (transop == zoom) {
+		Transform::zoom(zoomAmount * yloc, eye, center) ;
+	}
+	
+	mouseoldy = y ;
+	mouseoldx = x ;
+
+	glutPostRedisplay() ;
+}
+// MICE
+
 void init() {
   
   // Set up initial position for eye, up and amount
@@ -339,17 +423,21 @@ void init() {
 	eye = eyeinit ; 
 	up = upinit ; 
 	center = centerinit ;
-	eye_center = centerinit;
-
 	amount = 5;
     sx = sy = 1.0 ; 
     tx = ty = 0.0 ;
-	eye_dp = 0.05;
-
 	useGlu = false;
 	zNear = 0.1 ;
 	zFar = 99.0 ;
 	fovy = 90.0 ;
+	// CONTROL
+	eye_dp = 0.05;
+	alt_controls = true ;
+
+	// CONTROL 2
+	move_amount = 0.2;
+	turn_amount = 3.0;
+	move_center = vec3(0.0, 2.0, 1.0);
 
 	numLightsOn = 0 ;
 	selectedLight = -1 ;
@@ -358,7 +446,6 @@ void init() {
 
 	// initialize .obj reader
 	obj.init("no file yet.obj");
-
 	// Initialize the stack
 	transfstack.push(mat4(1.0)) ;
 
@@ -400,11 +487,7 @@ void display() {
 
     if (useGlu) mv = glm::lookAt(eye,center,up) ; 
 	else {
-		  if(alt_controls){
-			mv = Transform::lookAt(eye,eye_center,up) ;
-		  }else{
-			mv = Transform::lookAt(eye,center,up) ;
-		  }
+          mv = Transform::lookAt(eye,center,up) ; 
           mv = glm::transpose(mv) ; // accounting for row major
         }
     glLoadMatrixf(&mv[0][0]) ; 
@@ -507,8 +590,6 @@ void execute(std::string cmd, std::vector<std::string> params) {
 		for (int i = 0; i < 10; i++) cam[i] = atof(params[i].c_str()) ;
 		eye = vec3(cam[0], cam[1], cam[2]) ;
 		center = vec3(cam[3], cam[4], cam[5]) ;
-		eye_center = center;
-
 		up = glm::normalize(vec3(cam[6], cam[7], cam[8])) ;
 		fovy = cam[9] ;
 		resetEye = eye ;
@@ -626,11 +707,20 @@ int main(int argc, char* argv[]) {
 	parse(argv[1]);
 	glutDisplayFunc(display);
 	glutSpecialFunc(specialKey);
+	// glutKeyboardFunc(keyboard);
+
+	// MICE
+	glutMouseFunc(mouse);
+	glutMotionFunc(mousedrag);
+	// MICE
+
+	// CONTROL
 	if(alt_controls){
 		glutKeyboardFunc(altKeyboard);
 	}else{
 		glutKeyboardFunc(keyboard);
 	}
+
 	glutReshapeFunc(reshape);
 	glutReshapeWindow(600, 400);
 	printHelp();
