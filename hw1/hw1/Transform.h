@@ -24,6 +24,14 @@ public:
 	Transform();
 	virtual ~Transform();
 	static void left(float degrees, vec3& eye, vec3& up);
+	// MICE
+	static void centerleft(float degrees, vec3& eye, vec3& center, vec3& up) ;
+	static void centerup(float degrees, vec3& eye, vec3& center, vec3& up);
+	static void zoom(float dist, vec3& eye, vec3& center);
+	// MICE
+	// CONTROL
+	static void moveleft(float degrees, vec3 eye, vec3& move_center);
+	// CONTROL
 	static void up(float degrees, vec3& eye, vec3& center, vec3& up);
 	static mat4 lookAt(const vec3& eye, const vec3& center, const vec3& up);
 	static mat4 perspective(float fovy, float aspect, float zNear, float zFar);
