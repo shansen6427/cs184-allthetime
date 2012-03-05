@@ -2,6 +2,8 @@
 
 #include "stdafx.h"
 #include "Transform.h"
+#include "QPrint.h"
+#include <iostream>
 
 //Takes as input the current eye position, and the current up vector.
 //up is always normalized to a length of 1.
@@ -27,6 +29,56 @@ void Transform::left(float degrees, vec3& eye, vec3& up) {
 	float magnitude = sqrt(pow(eye[0], 2) + pow(eye[1], 2) + pow(eye[2], 2)) ;
 	eye = eye * rotation ;
 }
+
+// MICE
+void Transform::centerleft(float degrees, vec3& eye, vec3& center, vec3& up) {
+	vec3 worldUp = vec3(0.0, 0.0, 1.0) ;
+	mat3 rotation = rotate(degrees, worldUp) ;
+	vec3 distVector = eye - center ;
+
+	distVector = distVector * rotation ;
+	center = eye - distVector ;
+	up = up * rotation ;
+
+}
+
+void Transform::centerup(float degrees, vec3& eye, vec3& center, vec3& up) {
+	vec3 distVector = eye - center ;
+	float magDist = sqrt(pow(distVector[0], 2) + pow(distVector[1], 2) + pow(distVector[2], 2)) ;
+	vec3 crossVector = glm::cross(distVector, up) ;
+	mat3 rotation = rotate(degrees, crossVector) ;
+
+	distVector = distVector * rotation ;
+	center = eye - distVector ;
+	up = up * rotation ;
+
+	// Keep camera from looping around
+	if (up[2] < 0.1) {
+		up = glm::normalize(vec3(up[0], up[1], 0.1)) ;
+		center = eye + magDist * glm::normalize(glm::cross(crossVector, up)) ;
+	}
+}
+
+void Transform::zoom(float dist, vec3& eye, vec3& center) {
+	vec3 distVector = eye - center ;
+	vec3 dirVector = glm::normalize(-distVector) ;
+	eye = eye - dist * dirVector ;
+	center = center - dist * dirVector ;
+}
+
+// MICE
+
+// CONTROL
+void Transform::moveleft(float degrees, vec3 eye, vec3& move_center) {
+	vec3 worldUp = vec3(0.0, 0.0, 1.0) ;
+	mat3 rotation = rotate(degrees, worldUp) ;
+	vec3 distVector = eye - move_center ;
+
+	distVector = distVector * rotation ;
+	move_center = eye - distVector ;
+}
+
+// CONTROL
 
 void Transform::up(float degrees, vec3& eye, vec3& center, vec3& up) {
 	vec3 crossVector = glm::cross(eye - center, up) ;
