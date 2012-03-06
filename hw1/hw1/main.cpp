@@ -72,25 +72,27 @@ GLuint specular ;
 GLuint emission ;
 GLuint shininess ;
 
-// MICE
+// Variables for movement and camera control
+const GLuint GLUT_SCROLL_UP = 3 ;
+const GLuint GLUT_SCROLL_DOWN = 4 ;
 int mouseoldx, mouseoldy ;
-// MICE
-
-// CONTROL
 bool alt_controls ;
-float eye_dp; // the translation in the eye lookat direction
-vec3 eye_center; // The (regularly updated) vector coordinates of the eye lookat location
-// CONTROL
 
-// CONTROL2
-float move_amount ;
-float turn_amount ;
+const vec3 worldUp = vec3(0.0, 0.0, 1.0) ;
 vec3 forward_dir ;
 vec3 move_center ;
+vec3 forward_velocity ;
+vec3 side_velocity ;
+float turn_speed ;
+const float move_amount = 0.2 ;
+const float turn_amount = -6.0 ; // Negative due to the way rotation works
+const float viscosity = 50. ;
+const float camera_turn_amount = .1 ;
+const float zoom_amount = .03 ;
 bool align_flag ;
 bool aligned ;
 bool viewing ;
-// CONTROL 2
+bool key_press_arr[6] ;
 
 // New helper transformation function to transform vector by modelview 
 // May be better done using newer glm functionality.
@@ -233,35 +235,30 @@ void keyboard(unsigned char key, int x, int y) {
 	glutPostRedisplay();
 }
 
+/**
+ * Recursive timer function used for alignment of center to move_center (camera to forward).
+ * Takes and passes decreasing VALUE to determine number of calls.
+ */
 void alignTimer(int value) {
 	glutPostRedisplay() ;
-	// std::cout << "Value " << value << std::endl;
-	if (value > 0 && !viewing) {
+	if (value > 0 && !viewing) { // Make sure the mouse is not in-use
 		Transform::centeralign(eye, move_center, center, up, value) ;
-		// std::cout << "Calling new timer " << value << std::endl ;
-		glutTimerFunc(1, alignTimer, value - 1) ;
+		glutTimerFunc(1, alignTimer, --value) ; // Decrement and call recursively
 	} else if (viewing) {
-		std::cout << "Timer stopped" << std::endl ;
-		align_flag = true ;
+		align_flag = true ; // If stopped in the middle of aligning, switch flag
 	}
-	if (value == 0) {
-		// QPrint::v3p("Final center ", center) ;
-		// QPrint::v3p("Move_center ", move_center) ;
+	if (value == 0) { // Completed alignment
 		center = move_center ;
+		up = worldUp ;
 		aligned = true ;
-		std::cout << "Alignment complete" << std::endl ;
 	}
 }
 
-vec3 specialvec = vec3(0.0) ;
-vec3 forward_velocity = vec3(0.0) ;
-vec3 side_velocity = vec3(0.0) ;
-float turn_speed = 0 ;
-float viscosity = 50. ;
 
-bool key_press_arr[6] ;
-
-// Set and get status of keys from key_press_arr
+/**
+ * Set and get key statuses.
+ * Accesses key_press_arr according to CMD at location KEY. If setting, uses NEW_VAL.
+ */
 bool scanKeys(std::string cmd, unsigned char key, bool new_val) {
 	int index = -1 ;
 	if (key == 'q') index = 0 ;
@@ -278,49 +275,36 @@ bool scanKeys(std::string cmd, unsigned char key, bool new_val) {
 }
 
 /**
- *  The controls for the roaming camera.  These are currently only usable as an alternative
- * to the hw2 controls.  Activated when alt_controls = true.  The current controls are:
- * w: move in the direction the camera is currently looking
- * s: move in the opposite direction from which the camera is currently looking
- * a: move to the left of the direction the camera is currently looking
- * d: move to the right of the direction the camera is currently looking
+ *  First-person keyboard controls. 
+ *  Changes camera movement according to KEY. Ignores mouse X and Y.
+ *  Functionality:
+ *  w: Move forward
+ *  s: Move backward
+ *  a: Turn counterclockwise
+ *  d: Turn clockwise
+ *  q: Move left
+ *  e: Move right
+ *  z: Activate zoom
  */
-void altkeyboard(unsigned char key, int x, int y){
-	vec3 worldUp = vec3(0.0, 0.0, 1.0) ;
+void altKeyboard(unsigned char key, int x, int y){
 	vec3 move_vec = move_center - eye ;
-	vec3 forward_dir = glm::normalize(vec3(move_vec[0], move_vec[1], 0.0)) ;
 	vec3 cross_vec = glm::cross(move_vec, worldUp) ;
-	vec3 side_dir = glm::normalize(vec3(cross_vec[0], cross_vec[1], 0.0)) ;
+	vec3 forward_dir = glm::normalize(vec3(move_vec[0], move_vec[1], 0.0)) ;
+	vec3 side_dir = glm::normalize(vec3(cross_vec[0], cross_vec[1], 0.0)) ; // Points right of view
 	
 	vec3 eye_from_m = move_center - eye ;
 	vec3 eye_from_c = center - eye ;
-	float dotP = glm::dot(eye_from_m, eye_from_c) / (QPrint::magv(eye_from_m) * QPrint::magv(eye_from_c)) ;
-	
-	/*
-	QPrint::v3p("Move_center ", move_center) ;
-	QPrint::v3p("Center ", center) ;
-
-	std::cout << ((align_flag) ? "Flag on" : "Flag off") << std::endl ;
-	std::cout << ((viewing) ? "Viewing" : "Not viewing") << std::endl ;
-	std::cout << ((aligned) ? "Aligned" : "Not aligned") << std::endl ;
-	*/
+	float dot_p = glm::dot(eye_from_m, eye_from_c) / (QPrint::magv(eye_from_m) * QPrint::magv(eye_from_c)) ;
 
 	// Animate the camera
 	int steps = 50 ; // Increase for smoother alignment
-	if (dotP < 1.0 && align_flag && center != move_center) {
-		// std::cout << "dotP " << dotP << std::endl ;
-		glutTimerFunc(0, alignTimer, steps);
-		align_flag = false ;
-		aligned = false ;
+	if (dot_p < 1.0 && align_flag && center != move_center) { // Last condition avoids weird precision case
+		glutTimerFunc(0, alignTimer, steps); // Begin timer
+		align_flag = false ; // Avoid calling overlapping timers
+		aligned = false ; // Stop movement while aligning
 	}
-	/*
-	std::cout << "After" << std::endl ;
-	std::cout << ((align_flag) ? "Flag on" : "Flag off") << std::endl ;
-	std::cout << ((viewing) ? "Viewing" : "Not viewing") << std::endl ;
-	std::cout << ((aligned) ? "Aligned" : "Not aligned") << std::endl ;
-	*/
-	// std::cout << "DOT " << dotP << std::endl ;
 	
+	// TODO: make zoom compatible with alignment
 	if (transop == zoom) {
 		switch(key) {
 		case 'v':
@@ -328,36 +312,25 @@ void altkeyboard(unsigned char key, int x, int y){
 			resetCamera() ;
 			std::cout << "Operation is set to View\n" ;
 			break ;
-		default:
-			break ;
 		}
 	} else if (transop == view) {
 		switch(key){
 		case 'w':
-			// eye += move_amount * forward_dir ;
-			// move_center += move_amount * forward_dir ;
 			forward_velocity = move_amount/viscosity * forward_dir ;
 			break ;
 		case 's':
-			// eye -= move_amount * forward_dir ;
-			// move_center -= move_amount * forward_dir ;
 			forward_velocity = -move_amount/viscosity * forward_dir ;
 			break ;
 		case 'a':
-			turn_speed = turn_amount/viscosity ;
-			
+			turn_speed = -turn_amount/viscosity ;
 			break ;
 		case 'd':
-			turn_speed = -turn_amount/viscosity ;
+			turn_speed = turn_amount/viscosity ;
 			break;
 		case 'q':
-			// eye -= move_amount * side_dir ;
-			// move_center -= move_amount * side_dir ;
 			side_velocity = -move_amount/viscosity * side_dir ;
 			break;
 		case 'e':
-			// eye += move_amount * side_dir ;
-			// move_center += move_amount * side_dir ;
 			side_velocity = move_amount/viscosity * side_dir ;
 			break;
 		case 'z':
@@ -365,11 +338,9 @@ void altkeyboard(unsigned char key, int x, int y){
 			std::cout << "Operation is set to Zoom\n" ;
 			break ;
 		}
-		if (key != 'z') scanKeys("set", key, true) ;
+		if (key != 'z') scanKeys("set", key, true) ; // Mark the key as active
 
-		if (key != 'z' && aligned) {
-			// std::cout << "DOING THIS" << std::endl ;
-			up = worldUp ;
+		if (key != 'z' && aligned) { // Update "true" position for zooming
 			saveResets() ;
 		}
 	}
@@ -377,13 +348,18 @@ void altkeyboard(unsigned char key, int x, int y){
 	glutPostRedisplay();
 }
 
-void keyboardup(unsigned char key, int x, int y) {
-	vec3 worldUp = vec3(0.0, 0.0, 1.0) ;
+/**
+ *  Keyboard release controls.
+ *  Changes camera movement according to KEY. Ignores mouse X and Y.
+ *  Handles opposing movement cases.
+*/
+void keyboardUp(unsigned char key, int x, int y) {
 	vec3 move_vec = move_center - eye ;
-	vec3 forward_dir = glm::normalize(vec3(move_vec[0], move_vec[1], 0.0)) ;
 	vec3 cross_vec = glm::cross(move_vec, worldUp) ;
-	vec3 side_dir = glm::normalize(vec3(cross_vec[0], cross_vec[1], 0.0)) ;
+	vec3 forward_dir = glm::normalize(vec3(move_vec[0], move_vec[1], 0.0)) ;
+	vec3 side_dir = glm::normalize(vec3(cross_vec[0], cross_vec[1], 0.0)) ; // Points right of view
 
+	// If the counterpart key is active, switch over to that key's function
 	switch(key) {
 	case 'w':
 		forward_velocity = (scanKeys("get", 's', true)) ? -move_amount/viscosity * forward_dir : vec3(0.0) ;
@@ -398,18 +374,58 @@ void keyboardup(unsigned char key, int x, int y) {
 		side_velocity = (scanKeys("get", 'q', true)) ? -move_amount/viscosity * side_dir : vec3(0.0) ;
 		break ;
 	case 'a':
-		turn_speed = (scanKeys("get", 'd', true)) ? -turn_amount/viscosity : 0 ;
+		turn_speed = (scanKeys("get", 'd', true)) ? turn_amount/viscosity : 0 ;
 		break ;
 	case 'd':
-		turn_speed = (scanKeys("get", 'a', true)) ? turn_amount/viscosity : 0 ;
+		turn_speed = (scanKeys("get", 'a', true)) ? -turn_amount/viscosity : 0 ;
 		break ;
 	}
-	scanKeys("set", key, false) ;
+	scanKeys("set", key, false) ; // Mark the key inactive
+}
+
+/**
+ *  Mouse click function.
+ *  Registers the STATE of a BUTTON press at X and Y.
+ */
+void mouse(int button, int state, int x, int y) {
+	if (state == GLUT_DOWN) {
+		if (button == GLUT_LEFT_BUTTON) {
+			mouseoldx = x ;
+			mouseoldy = y ;
+			viewing = true ; // Stop pending alignment
+			align_flag = true ; // Allow alignment
+		} else if (button == GLUT_RIGHT_BUTTON) {
+			resetCamera() ;
+			glutPostRedisplay() ;
+		}
+	} else if (state == GLUT_UP && button == GLUT_LEFT_BUTTON) {
+		viewing = false ;
+	}
+}
+
+/**
+ *  Mouse drag function.
+ *  Takes current mouse position X and Y.
+ */
+void mouseDrag(int x, int y) {
+	int xloc = x - mouseoldx ;
+	int yloc = y - mouseoldy ;
+
+	if (transop == view) {
+		Transform::centerleft(camera_turn_amount * xloc, eye, center, up) ; // Rotate center and up about the z-axis
+		Transform::centerup(-camera_turn_amount * yloc, eye, center, up) ; // Rotate center and up about the perpendicular axis
+	} else if (transop == zoom) {
+		Transform::zoom(zoom_amount * yloc, eye, center) ;
+	}
+	
+	mouseoldy = y ;
+	mouseoldx = x ;
+
+	glutPostRedisplay() ;
 }
 
 //  You will need to enter code for the arrow keys 
 //  When an arrow key is pressed, it will call your transform functions
-
 void specialKey(int key, int x, int y) {
 	switch(key) {
 	case 100: //left
@@ -472,46 +488,6 @@ void specialKey(int key, int x, int y) {
 	glutPostRedisplay();
 }
 
-
-// MICE
-const GLuint GLUT_SCROLL_UP = 3 ;
-const GLuint GLUT_SCROLL_DOWN = 4 ;
-void mouse(int button, int state, int x, int y) {
-	if (state == GLUT_DOWN) {
-		if (button == GLUT_LEFT_BUTTON) {
-			mouseoldx = x ;
-			mouseoldy = y ;
-			viewing = true ;
-			align_flag = true ;
-		} else if (button == GLUT_RIGHT_BUTTON) {
-			resetCamera() ;
-			glutPostRedisplay() ;
-		}
-	} else if (state == GLUT_UP && button == GLUT_LEFT_BUTTON) {
-		viewing = false ;
-	}
-}
-
-void mousedrag(int x, int y) {
-	int xloc = x - mouseoldx ;
-	int yloc = y - mouseoldy ;
-	float turnAmount = .1 ;
-	float zoomAmount = .03 ;
-
-	if (transop == view) {
-		Transform::centerleft(turnAmount * xloc, eye, center, up) ;
-		Transform::centerup(-turnAmount * yloc, eye, center, up) ;
-	} else if (transop == zoom) {
-		Transform::zoom(zoomAmount * yloc, eye, center) ;
-	}
-	
-	mouseoldy = y ;
-	mouseoldx = x ;
-
-	glutPostRedisplay() ;
-}
-// MICE
-
 void init() {
   
   // Set up initial position for eye, up and amount
@@ -527,20 +503,14 @@ void init() {
 	zNear = 0.1 ;
 	zFar = 99.0 ;
 	fovy = 90.0 ;
-	// CONTROL
-	eye_dp = 0.05;
+	numLightsOn = 0 ;
+	selectedLight = -1 ;
+	
 	alt_controls = true ;
-
-	// CONTROL 2
-	move_amount = 0.2 ;
-	turn_amount = 3.0 ;
 	move_center = vec3(0.0, 2.0, 1.0) ;
 	align_flag = true ;
 	aligned = true ; // Make sure this is true 
 	viewing = false ;
-
-	numLightsOn = 0 ;
-	selectedLight = -1 ;
 
 	// Initialize the stack
 	transfstack.push(mat4(1.0)) ;
@@ -581,6 +551,7 @@ void display() {
 	glMatrixMode(GL_MODELVIEW);
 	mat4 mv ;
 
+	// Move smoothly if not in the process of alignment
 	if (aligned) {
 		// Forward/backward
 		eye += forward_velocity ;
@@ -593,17 +564,12 @@ void display() {
 		// Turn
 		Transform::moveleft(turn_speed, eye, move_center) ;
 	
+		// Update if moving
 		if (forward_velocity != vec3(0.0) || side_velocity != vec3(0.0) || turn_speed != 0) {
 			center = move_center ;
 		}
 	}
 
-	/*
-	if (forward_velocity != vec3(0.0) || side_velocity != vec3(0.0)) {
-		QPrint::v3p("DISPLAY C ", center) ;
-		QPrint::v3p("DISPLAY M ", move_center) ;
-	}
-	*/
     if (useGlu) mv = glm::lookAt(eye,center,up) ; 
 	else {
           mv = Transform::lookAt(eye,center,up) ; 
@@ -828,16 +794,16 @@ int main(int argc, char* argv[]) {
 
 	// MICE
 	glutMouseFunc(mouse);
-	glutMotionFunc(mousedrag);
+	glutMotionFunc(mouseDrag);
 	// MICE
 
 	// CONTROL
 	if(alt_controls){
-		glutKeyboardFunc(altkeyboard);
+		glutKeyboardFunc(altKeyboard);
 	}else{
 		glutKeyboardFunc(keyboard);
 	}
-	glutKeyboardUpFunc(keyboardup);
+	glutKeyboardUpFunc(keyboardUp);
 	glutIdleFunc(display) ;
 	glutReshapeFunc(reshape);
 	glutReshapeWindow(600, 400);

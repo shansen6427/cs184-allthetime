@@ -30,7 +30,6 @@ void Transform::left(float degrees, vec3& eye, vec3& up) {
 	eye = eye * rotation ;
 }
 
-// MICE
 void Transform::centerleft(float degrees, vec3& eye, vec3& center, vec3& up) {
 	vec3 worldUp = vec3(0.0, 0.0, 1.0) ;
 	mat3 rotation = rotate(degrees, worldUp) ;
@@ -66,25 +65,16 @@ void Transform::zoom(float dist, vec3& eye, vec3& center) {
 	center = center - dist * dirVector ;
 }
 
-// MICE
-
-// CONTROL
 void Transform::centeralign(vec3 eye, vec3 move_center, vec3& center, vec3& up, float speed) {
 	vec3 eye_from_m = move_center - eye ;
 	vec3 eye_from_c = center - eye ;
 	vec3 cross_vector = glm::cross(eye_from_m, eye_from_c) ;
 	float theta = glm::acos(glm::dot(eye_from_m, eye_from_c) / (QPrint::magv(eye_from_m) * QPrint::magv(eye_from_c))) ;
-	// std::cout << "THETA " << theta << std::endl ;
-	float rotate_amount = theta * 180.0 / pi / speed ;
-	// std::cout << "ROTATE AMOUNT " << rotate_amount << std::endl ;
+	float rotate_amount = theta * 180.0f / pi / speed ;
 	mat3 rotation = rotate(-rotate_amount, cross_vector) ;
-	// std::cout << "Mag before " << QPrint::magv(eye_from_c) << std::endl ;
 	eye_from_c = eye_from_c * rotation ;
-	// std::cout << "Mag after " << QPrint::magv(eye_from_c) << std::endl ;
-	// QPrint::v3p("Center before ", center) ;
 	center = eye_from_c + eye ;
 	up = vec3(0.0, 0.0, 1.0) ;
-	// QPrint::v3p("Rotated center ", center) ;
 }
 
 void Transform::moveleft(float degrees, vec3 eye, vec3& move_center) {
@@ -95,8 +85,6 @@ void Transform::moveleft(float degrees, vec3 eye, vec3& move_center) {
 	distVector = distVector * rotation ;
 	move_center = eye - distVector ;
 }
-
-// CONTROL
 
 void Transform::up(float degrees, vec3& eye, vec3& center, vec3& up) {
 	vec3 crossVector = glm::cross(eye - center, up) ;
