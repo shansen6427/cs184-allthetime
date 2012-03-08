@@ -247,7 +247,6 @@ void altKeyboard(unsigned char key, int x, int y){
 	vec3 translate_vec; 
 	vec4 eye4 = vec4(eye, 1.0), eye_center4(eye_center, 1.0);
 	vec3 w_vec, u_vec;
-	*/
 	vec3 worldUp = vec3(0.0, 0.0, 1.0) ;
 	vec3 move_vec = move_center - eye ;
 	vec3 forward_dir = glm::normalize(vec3(move_vec[0], move_vec[1], 0.0)) ;
@@ -445,7 +444,11 @@ void init() {
 	alt_controls = false;
 
 	// initialize .obj reader
-	obj.init("no file yet.obj");
+	obj.init("Anubis_alienado.obj");
+	obj.moveToCenter();
+	obj.scale(2.0, 2.0, 2.0);
+	//obj.translate(0.0, 0.5, 0.0);
+
 	// Initialize the stack
 	transfstack.push(mat4(1.0)) ;
 
