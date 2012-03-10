@@ -16,7 +16,9 @@
 #include <GL/glut.h>
 #include "shaders.h"
 #include "Transform.h"
+#include "Shapes.h"
 #include "QPrint.h"
+
 
 int amount; // The amount of rotation for each arrow press
 
@@ -564,7 +566,16 @@ void init() {
 	emission = glGetUniformLocation(shaderprogram,"emission") ; 
 	shininess = glGetUniformLocation(shaderprogram,"shininess") ;       
 }
-
+/*
+void printE() {
+	glBegin(GL_POLYGON) ;
+		glVertex3f(0, 0, 0.7) ;
+		glVertex3f(0.1, 0, 0.6) ;
+		glVertex3f(-0.1, 0, 0.6) ;
+	glEnd() ;
+}
+*/
+float testrotate = 0 ;
 void display() {
 	glClearColor(0, 0, 1, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -673,6 +684,84 @@ void display() {
 			}
 		}
 
+	glLoadMatrixf(&mv[0][0]) ;
+	glPushMatrix() ;
+	glTranslatef(0.0, 0.0, 0.5) ;
+	testrotate -= .3 ;
+	if (testrotate > 360) testrotate = 0 ;
+	glRotatef(testrotate, 1.0, 0.0, 0.0) ;
+	glutSolidCube(.10) ;
+	glPopMatrix() ;
+
+	// Draw border 
+	float z_scale = 1.3 ;
+	float block_size = .20 ;
+	float spacing = 0.025 ;
+	float startx = 1.0 ;
+	float starty = 0.0 ;
+	float startz = block_size * z_scale / 2 ;
+	float xpos, ypos, zpos ;
+	glPushMatrix() ;
+	float testcolor2[4] = {0.0, 1.0, 0.0, 1.0} ;
+	glUniform4fv(diffuse, 1, testcolor2) ;
+	for (int i = 0 ; i < 10 ; i++) {
+		for (int j = 0 ; j < 4 ; j++) {
+			if (j == 1 && (i != 0 && i != 8 && i != 9)) continue ;
+			if (j == 2 && (i != 0 && i != 6 && i != 9)) continue ;
+			xpos = startx + (float) i * (block_size + spacing) ;
+			ypos = starty ;
+			zpos = startz + (float) j * (block_size * z_scale + spacing) ;
+			glPushMatrix() ;
+			glTranslatef(xpos, ypos, zpos) ;
+			glScalef(1.0, 1.0, z_scale) ;
+			glutSolidCube(block_size) ;
+			glPopMatrix() ;
+		}
+	}
+	glPopMatrix() ;
+
+	float letter_scale = 0.8 ;
+
+	// Draw letter blocks
+	float testcolor3[4] = {1.0, 1.0, 1.0, 1.0} ;
+	float testcolor[4] = {0.0, 0.0, 0.0, 1.0} ;
+	bool block_active[14] ;
+	char block_letters[14] = {'F', 'O', 'R', 'T', 'U', 'N', 'E', 'W', 'H', 'E', 'E', 'L', 'O', 'F'} ;
+	for (int i = 0; i < 14; i++) block_active[i] = true ;
+	int block_number = 0 ;
+	for (int j = 1; j < 3; j++) {
+		for (int i = 1; i < 9; i++) {
+			if ((j == 1 && i == 8) || (j == 2 && i == 6)) continue ;
+			xpos = startx + (float) i * (block_size + spacing) ;
+			ypos = starty ;
+			zpos = startz + (float) j * (block_size * z_scale + spacing) ;
+
+			glPushMatrix() ;
+			glTranslatef(xpos, ypos, zpos) ;
+			if (block_active[block_number]) 
+				glRotatef(testrotate, 0.0, 0.0, 1.0) ; // Only rotate active blocks
+			glScalef(1.0, 1.0, z_scale) ;
+			glUniform4fv(diffuse, 1, testcolor3) ;
+			glutSolidCube(block_size) ;
+			glPopMatrix() ;
+
+			glPushMatrix() ;
+			glTranslatef(xpos, ypos, zpos) ; // Move center axis to blocks
+			glRotatef(testrotate, 0.0, 0.0, 1.0) ; // Rotate with the block
+			glTranslatef(block_size / 2 + spacing / 4, 0.0, 0.0) ; // Translate to the right face of the block
+			glRotatef(90.0f, 0.0f, 0.0f, 1.0f) ; // Rotate to face right
+			glScalef(letter_scale * block_size, letter_scale * block_size, letter_scale * z_scale * block_size) ; // Scale first
+			glUniform4fv(diffuse, 1, testcolor) ;
+			char letter = block_letters[block_number] ;
+			Shapes::printLetter(letter, true) ;
+			glUniform4fv(diffuse, 1, testcolor3) ; // Change to white for inner shape
+			Shapes::printLetter(letter, false) ;
+			glPopMatrix() ;
+
+			block_number++ ; // Move on to the next block
+		}
+	}
+
 	glutSwapBuffers();
 }
 
@@ -754,6 +843,7 @@ void execute(std::string cmd, std::vector<std::string> params) {
 		objects.push_back("teapot") ;
 		objTransforms.push_back(transfstack.top()) ;
 		objSize.push_back(size) ;
+		std::cout << "Location of teapot " << objSize.size() << std::endl ;
 		saveProps() ;
 	} else if (!cmd.compare("sphere")) {
 		if (numParams != 1) stopInvalid();
