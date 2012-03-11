@@ -12,6 +12,7 @@
 #include <stack>
 #include <vector>
 #include <math.h>
+#include <time.h>
 #include <GL/glew.h>
 #include <GL/glut.h>
 #include "shaders.h"
@@ -33,7 +34,7 @@ int w, h; // width and height
 float zNear, zFar ;
 float fovy ;
 GLuint vertexshader, fragmentshader, shaderprogram ; // shaders
-static enum {view, translate, scale, zoom} transop ; // which operation to transform by 
+static enum {view, translate, scale, zoom, play} transop ; // which operation to transform by 
 float sx, sy ; // the scale in x and y 
 float tx, ty ; // the translation in x and y
 vec3 resetEye ;
@@ -100,6 +101,31 @@ bool viewing ;
 bool jumping ;
 bool key_press_arr[6] ;
 bool alt_controls ;
+
+// Variables for the game
+std::vector<char> unguessed_vec ;
+std::vector<char> guessed_vec ;
+const char correct_arr[10] = {'w', 'h', 'e', 'l', 'o', 'f', 'r', 't', 'u', 'n'} ;
+const char block_letters[14] = {'w', 'h', 'e', 'e', 'l', 'o', 'f', 'f', 'o', 'r', 't', 'u', 'n', 'e'} ;
+float block_rotations[14] ;
+bool block_activity[14] ;
+bool in_game ;
+bool board_ready ;
+float block_velocity ; // Negative will reveal the block
+const float block_speed = 0.5 ; 
+float wheel_angle ;
+float wheel_speed ;
+const float wheel_decel = -0.01 ;
+const float init_wheel_speed = 5.0 ;
+bool spinning ;
+bool has_spun ;
+int total_score ;
+int spin_points ;
+const vec3 play_location = vec3(1.5, -4.0, 1.0) ;
+const vec3 board_location = vec3(2.5, 0.0, 1.0) ;
+const float play_radius = 0.5 ;
+
+// TODO: Introduce a constant Z-height, change accordingly in functions
 
 // New helper transformation function to transform vector by modelview 
 // May be better done using newer glm functionality.
@@ -281,6 +307,107 @@ bool scanKeys(std::string cmd, unsigned char key, bool new_val) {
 	return false ;
 }
 
+void resetGuesses() {
+	unguessed_vec.clear() ;
+	guessed_vec.clear() ;
+	for (int i = 0; i < 10; i++) {
+		unguessed_vec.push_back(correct_arr[i]) ;
+	}
+}
+
+void resetRotations() {
+	for (int i = 0; i < 14; i++) {
+		block_activity[i] = true ;
+		block_velocity = block_speed ;
+	}
+}
+
+void playerGuess(unsigned char key) {
+	bool guessed_right = false ;
+	bool guessed_repeat = false ;
+	for (unsigned int i = 0; i < unguessed_vec.size(); i++) {
+		if (key == unguessed_vec[i]) {
+			unguessed_vec.erase(unguessed_vec.begin() + i) ;
+			guessed_vec.push_back(key) ;
+			guessed_right = true ;
+			break ;
+		}
+	}
+
+	for (unsigned int i = 0; i < guessed_vec.size(); i++) {
+		if (key == guessed_vec[i]) {
+			guessed_repeat = true ;
+			break ;
+		}
+	}
+
+	if (guessed_right) {
+		int letters_flipped = 0 ;
+		for (int i = 0; i < 14; i++) {
+			if (key == block_letters[i]) {
+				block_activity[i] = true ;
+				letters_flipped++ ;
+			}
+		}
+		total_score += spin_points * letters_flipped ;
+		std::cout << "Yes, there is(are) " << letters_flipped << " " << key << "('s)." << std::endl ;
+		std::cout << "That brings your score to " << total_score << "." << std::endl ;
+	} else if (guessed_repeat) {
+		std::cout << "You've already guessed that!" << std::endl ;
+	} else {
+		std::cout << "Sorry, there are no " << key << "'s." << std::endl ;
+	}
+
+	if (unguessed_vec.size() == 0) {
+		std::cout << std::endl << "Congratulations! You've solved the puzzle!" << std::endl ;
+		std::cout << "Your score is: " << total_score << std::endl ;
+		in_game = false ;
+	} else {
+		std::cout << std::endl << "Spin again. " << std::endl << std::endl ;
+	}
+}
+
+void sleep(unsigned int mseconds)
+{
+    clock_t goal = mseconds + clock();
+    while (goal > clock());
+}
+
+void printInstructions() {
+	std::cout << "Welcome to Wheel of Fortune!" << std::endl ;
+	std::cout << "How-to-play:" << std::endl ;
+	std::cout << "Press ENTER to spin the wheel." << std::endl ;
+	std::cout << "After the wheel stops, guess a letter of the puzzle." << std::endl ;
+	std::cout << "If the letter is correct, you will be rewarded the  " << std::endl ;
+	std::cout << "number of points given by the wheel times the number" << std::endl ;
+	std::cout << "of letters revealed. You win when the puzzle has been" << std::endl ;
+	std::cout << "completely revealed." << std::endl ;
+	std::cout << "Press ESC at any time to exit the game." << std::endl ;
+	std::cout << "Press TAB to see these instructions again." << std::endl << std::endl ;
+	std::cout << "Puzzle hint: TV game show" << std::endl << std::endl ;
+}
+
+void startGame() {
+	in_game = true ;
+	board_ready = false ;
+	has_spun = false ;
+	spinning = false ;
+	wheel_angle = 0.0f ;
+	wheel_speed = 0.0f ;
+	total_score = 0 ;
+	spin_points = 0 ;
+	resetGuesses() ;
+	resetRotations() ;
+	std::cout << "********" << std::endl ;
+	std::cout << "Wheel " ;
+	sleep(500) ;
+	std::cout << "of" << std::endl ;
+	sleep(500) ;
+	std::cout << "Fortune!" << std::endl ;
+	std::cout << "********" << std::endl << std::endl ;
+	printInstructions() ;
+}
+
 /**
  *  First-person keyboard controls. 
  *  Changes camera movement according to KEY. Ignores mouse X and Y.
@@ -294,7 +421,40 @@ bool scanKeys(std::string cmd, unsigned char key, bool new_val) {
  *  z: Activate zoom
  */
 void altKeyboard(unsigned char key, int x, int y){
-	if (transop == zoom) {
+	if (transop == play) {
+		if (key == 27) {
+			transop = view ;
+			resetCamera() ;
+			resetRotations() ;
+			std::cout << "Thank you for playing!" << std::endl ;
+			std::cout << "----------------------" << std::endl ;
+			std::cout << "Operation is set to View\n" ;
+		} else if (in_game && board_ready) {
+			if (key == 9) {
+				printInstructions() ;
+			} else if (key == 13 && !spinning && !has_spun) {
+				wheel_speed = init_wheel_speed ; // Spin wheel
+				spinning = true ;
+			} else if (key >= 97 && key <= 122) {
+				if (has_spun) {
+					playerGuess(key) ;
+					has_spun = false ;
+				} else if (spinning) {
+					std::cout << "Please wait for the wheel to stop." << std::endl ;
+				} else {
+					std::cout << "You must spin first(ENTER) before guessing a letter." << std::endl ;
+				}
+			} else {
+				if (has_spun) {
+					std::cout << "Guess must be a letter of the alphabet; try again." << std::endl ;
+				} else if (spinning) {
+					std::cout << "Please wait for the wheel to stop." << std::endl ;
+				} else {
+					std::cout << "You must spin first(ENTER) before guessing a letter." << std::endl ;
+				}
+			}
+		}
+	} else if (transop == zoom) {
 		switch(key) {
 		case 'v':
 			transop = view ;
@@ -351,6 +511,17 @@ void altKeyboard(unsigned char key, int x, int y){
 			transop = zoom ;
 			saveResets() ; // Maintain "true" position during zooming
 			std::cout << "Operation is set to Zoom\n" ;
+			break ;
+		case 'p':
+			float dist_to_play = QPrint::magv(eye - play_location) ;
+			vec3 distboard_vec = board_location - eye ;
+			vec3 eye_from_m = move_center - eye ;
+			float dot_play = glm::dot(eye_from_m, distboard_vec) / (QPrint::magv(eye_from_m) * QPrint::magv(distboard_vec)) ;
+			if (dist_to_play < 1.0 && dot_play >= 0.995) { // Must be in the right location and facing the right direction
+				transop = play ;
+				saveResets() ;
+				startGame() ;
+			}
 			break ;
 		}
 		if (key != 'z' && key != 32) {
@@ -536,6 +707,17 @@ void init() {
 	viewing = false ;
 	jumping = false ;
 
+	in_game = false ;
+	board_ready = true ;
+	block_velocity = -block_speed ;
+	for (int i = 0; i < 14; i++) block_rotations[i] = 0 ;
+	wheel_angle = 0.0f ;
+	wheel_speed = 0.0f ;
+	spinning = false ;
+	has_spun = false ;
+
+	srand((unsigned) time(0)) ;
+
 	// Initialize the stack
 	transfstack.push(mat4(1.0)) ;
 
@@ -651,7 +833,7 @@ void display() {
 		tr = Transform::translate(tx,ty,0.0) ;
 		// Multiply the matrices, accounting for OpenGL and GLM.
 		sc = glm::transpose(sc) ; tr = glm::transpose(tr) ;
-		for (unsigned int i = 0; i < objects.size() ; i++) {
+		for (unsigned int i = 0; i < 1; i++) {// < objects.size() ; i++) {
 			mat4 objMat = glm::transpose(objTransforms[i]) ;
 			mat4 transf = mv * tr * sc * objMat ;
 			glLoadMatrixf(&transf[0][0]) ; 
@@ -693,17 +875,92 @@ void display() {
 	glutSolidCube(.10) ;
 	glPopMatrix() ;
 
-	// Draw border 
+	// Wheel and base properties
+	float base_height = 0.4 ;
+	float base_x = 1.5 ;
+	float base_y = -1.5 ;
+	float base_radius = 0.5 ;
+	float wheel_radius = base_radius + .01 ; // Make the wheel slightly larger than its base
+	float wheel_red[4] = {1.0, 0.0, 0.0, 1.0} ;
+	float wheel_green[4] = {0.0, 1.0, 0.0, 1.0} ;
+	float wheel_blue[4] = {0.0, 0.0, 1.0, 1.0} ;
+	float wheel_yellow[4] = {1.0, 1.0, 0.0, 1.0} ;
+	float wheel_white[4] = {1.0, 1.0, 1.0, 1.0} ; // Color for sticks of wheel
+	int color_cycle = 0 ; // Variable for determining color of strip
+	float stick_height = 0.16 ;
+
+	// Draw the base
+	glPushMatrix() ;
+	glTranslatef(base_x, base_y, 0.0) ;
+	glBegin(GL_QUAD_STRIP) ;
+		for (int i = 0; i <= 360; i++) {
+			float theta = (float) i * pi / 180.0f ;
+			glVertex3f(base_radius * cos(theta), base_radius * sin(theta), 0.0) ;
+			glVertex3f(base_radius * cos(theta), base_radius * sin(theta), base_height) ;
+		}
+	glEnd() ;
+	
+	glTranslatef(0.0, 0.0, base_height) ; // Place wheel on top of base
+	glRotatef(wheel_angle, 0.0, 0.0, 1.0) ;
+	wheel_angle += wheel_speed ;
+	if (wheel_speed > 0) wheel_speed += wheel_decel ;
+	if (wheel_speed < 0) {
+		wheel_speed = 0 ;
+		spinning = false ;
+		has_spun = true ;
+		spin_points = ((rand() % 10) + 1) * 100 ;
+		std::cout << "You've landed on " << spin_points << " points." << std::endl ;
+	}
+
+	for (int i = 0; i < 360; i += 18) {
+		if (color_cycle % 4 == 0) {
+			glUniform4fv(diffuse, 1, wheel_red) ;
+		} else if (color_cycle % 4 == 1) {
+			glUniform4fv(diffuse, 1, wheel_green) ;
+		} else if (color_cycle % 4 == 2) {
+			glUniform4fv(diffuse, 1, wheel_blue) ;
+		} else if (color_cycle % 4 == 3) {
+			glUniform4fv(diffuse, 1, wheel_yellow) ;
+		}
+
+		float theta = (float) i * pi / 180.0f ;
+		int j = i + 18 ; // Determine the next vertex
+		float theta2 = (float) j * pi / 180.0f ;
+		glBegin(GL_TRIANGLES) ;
+			glNormal3f(0.0, 0.0, 1.0) ;
+			glVertex3f(0.0, 0.0, 0.0) ;
+			glVertex3f(wheel_radius * cos(theta), wheel_radius * sin(theta), 0.0) ;
+			glVertex3f(wheel_radius * cos(theta2), wheel_radius * sin(theta2), 0.0) ;
+		glEnd() ;
+
+		glUniform4fv(diffuse, 1, wheel_white) ;
+		glPushMatrix() ;
+		glTranslatef(base_radius * cos(theta), base_radius * sin(theta), stick_height / 2) ;
+		glScalef(0.1, 0.1, 1.0) ;
+		glutSolidCube(stick_height) ;
+		glPopMatrix() ;
+		color_cycle++ ;
+	}
+	glPopMatrix() ;
+
+	// Board properties
 	float z_scale = 1.3 ;
-	float block_size = .20 ;
-	float spacing = 0.025 ;
+	float letter_scale = 0.8 ;
+	float block_size = 0.3 ;
+	float spacing = 0.05 ;
+	float border_diffuse[4] = {0.0, 1.0, 0.0, 1.0} ;
+	float block_diffuse[4] = {1.0, 1.0, 1.0, 1.0} ;
+	float letter_diffuse[4] = {0.0, 0.0, 0.0, 1.0} ;
+
+	// TODO: Draw separators
+
+	// Draw the static board
 	float startx = 1.0 ;
 	float starty = 0.0 ;
 	float startz = block_size * z_scale / 2 ;
 	float xpos, ypos, zpos ;
 	glPushMatrix() ;
-	float testcolor2[4] = {0.0, 1.0, 0.0, 1.0} ;
-	glUniform4fv(diffuse, 1, testcolor2) ;
+	glUniform4fv(diffuse, 1, border_diffuse) ;
 	for (int i = 0 ; i < 10 ; i++) {
 		for (int j = 0 ; j < 4 ; j++) {
 			if (j == 1 && (i != 0 && i != 8 && i != 9)) continue ;
@@ -720,16 +977,31 @@ void display() {
 	}
 	glPopMatrix() ;
 
-	float letter_scale = 0.8 ;
+	// Increase the rotation on active blocks
+	int inactive_count = 0 ;
+	for (int i = 0; i < 14; i++) {
+		if (block_activity[i]) {
+			block_rotations[i] += block_velocity ;
+			if (block_rotations[i] < -90) {
+				block_rotations[i] = -90 ;
+				block_activity[i] = false ;
+			}
+			if (block_rotations[i] > 0) {
+				block_rotations[i] = 0 ;
+				block_activity[i] = false ;
+			}
+		} else {
+			inactive_count++ ;
+		}
+	}
+	if (inactive_count == 14) {
+		block_velocity = -block_speed ;
+		board_ready = true ;
+	}
 
 	// Draw letter blocks
-	float testcolor3[4] = {1.0, 1.0, 1.0, 1.0} ;
-	float testcolor[4] = {0.0, 0.0, 0.0, 1.0} ;
-	bool block_active[14] ;
-	char block_letters[14] = {'F', 'O', 'R', 'T', 'U', 'N', 'E', 'W', 'H', 'E', 'E', 'L', 'O', 'F'} ;
-	for (int i = 0; i < 14; i++) block_active[i] = true ;
 	int block_number = 0 ;
-	for (int j = 1; j < 3; j++) {
+	for (int j = 2; j > 0; j--) {
 		for (int i = 1; i < 9; i++) {
 			if ((j == 1 && i == 8) || (j == 2 && i == 6)) continue ;
 			xpos = startx + (float) i * (block_size + spacing) ;
@@ -738,23 +1010,22 @@ void display() {
 
 			glPushMatrix() ;
 			glTranslatef(xpos, ypos, zpos) ;
-			if (block_active[block_number]) 
-				glRotatef(testrotate, 0.0, 0.0, 1.0) ; // Only rotate active blocks
+			glRotatef(block_rotations[block_number], 0.0, 0.0, 1.0) ;
 			glScalef(1.0, 1.0, z_scale) ;
-			glUniform4fv(diffuse, 1, testcolor3) ;
+			glUniform4fv(diffuse, 1, block_diffuse) ;
 			glutSolidCube(block_size) ;
 			glPopMatrix() ;
 
 			glPushMatrix() ;
 			glTranslatef(xpos, ypos, zpos) ; // Move center axis to blocks
-			glRotatef(testrotate, 0.0, 0.0, 1.0) ; // Rotate with the block
+			glRotatef(block_rotations[block_number], 0.0, 0.0, 1.0) ; // Rotate with the block
 			glTranslatef(block_size / 2 + spacing / 4, 0.0, 0.0) ; // Translate to the right face of the block
 			glRotatef(90.0f, 0.0f, 0.0f, 1.0f) ; // Rotate to face right
 			glScalef(letter_scale * block_size, letter_scale * block_size, letter_scale * z_scale * block_size) ; // Scale first
-			glUniform4fv(diffuse, 1, testcolor) ;
+			glUniform4fv(diffuse, 1, letter_diffuse) ;
 			char letter = block_letters[block_number] ;
 			Shapes::printLetter(letter, true) ;
-			glUniform4fv(diffuse, 1, testcolor3) ; // Change to white for inner shape
+			glUniform4fv(diffuse, 1, block_diffuse) ; // Same color as block
 			Shapes::printLetter(letter, false) ;
 			glPopMatrix() ;
 
