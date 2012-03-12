@@ -6,7 +6,6 @@
 #include <sstream>
 #include <string>
 #include <GL/glew.h>
-//#include <GL/glut.h>
 
 objReader::objReader(){
 }
@@ -62,23 +61,23 @@ objReader::init(const char* filename){
 		}
 	}
 
+	std::cout << ".obj file read successful" << std::endl;
 	return 0;
 }
 
 /**
  * draws the .obj object
  *  Goes through vector faces and specifies each vertex using that information
- *  Color not implemented; should probably pass it as an argument, or if we actually want
- * to use the texture info, god knows
+ *  Color arguments are used directly
  */
 void
-objReader::draw(){
-	// polygon (as opposed to triangle) draw 
+objReader::draw(const float &red, const float &green, const float &blue, const float &alpha){
 	std::vector<int> face;
 	vec3 vert;
 	for(unsigned int m = 0; m < faces.size(); m++){
 		face = faces[m];
 		glBegin(GL_POLYGON);
+			glColor4f(red, green, blue, alpha);
 			for(unsigned int n = 0; n < face.size(); n++){
 				vert = vertices[face[n] - 1];
 				//if(m < 5) std::cout << "vert: (" << vert.x << ", " << vert.y << ", " << vert.z << ")/n";

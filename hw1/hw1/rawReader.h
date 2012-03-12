@@ -1,5 +1,5 @@
 /**
- * objReader reads and renders .obj files
+ * rawReader reads and renders .raw files (well, some of them, anyway)
  */
 
 #include <vector>
@@ -8,10 +8,10 @@
 
 typedef glm::vec3 vec3 ;
 
-class objReader
+class rawReader
 {
 public:
-	objReader();
+	rawReader();
 	int init(const char* filename);
 	void draw(const float &red, const float &green, const float &blue, const float &alpha);
 	void moveToCenter();
@@ -20,5 +20,4 @@ public:
     void translate(const float &tx, const float &ty, const float &tz);
 private:
 	std::vector<vec3> vertices;
-	std::vector<std::vector<int>> faces;
 };

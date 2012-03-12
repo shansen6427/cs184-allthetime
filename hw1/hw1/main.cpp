@@ -3,6 +3,10 @@
 /* Extends HW 1 to deal with shading, more transforms and multiple objects   */
 /*****************************************************************************/
 
+/**
+ *  Anubis_alienado.obj provided for free download by www.themovies3d.com, model creation
+ * and distribution provided by Scopia Visual Interfaces Systems, s.l. (http://www.scopia.es)
+ */
 
 #include "stdafx.h"
 #include <iostream>
@@ -17,6 +21,7 @@
 #include "shaders.h"
 #include "Transform.h"
 #include "objReader.h"
+#include "rawReader.h"
 #include "QPrint.h"
 
 int amount; // The amount of rotation for each arrow press
@@ -92,6 +97,7 @@ vec3 move_center ;
 
 // file variables
 objReader obj;
+rawReader raw;
 
 // New helper transformation function to transform vector by modelview 
 // May be better done using newer glm functionality.
@@ -444,10 +450,17 @@ void init() {
 	alt_controls = false;
 
 	// initialize .obj reader
-	obj.init("Anubis_alienado.obj");
-	obj.moveToCenter();
-	obj.scale(2.0, 2.0, 2.0);
+	//obj.init("Anubis_alienado.obj");
+	//obj.moveToCenter();
+	//obj.scale(2.0, 2.0, 2.0);
 	//obj.translate(0.0, 0.5, 0.0);
+
+	// initialize .raw reader
+	//raw.init("test.raw");
+	//raw.moveToCenter();
+	//raw.scale(2.0, 2.0, 2.0);
+	//raw.translate(0.0, 1, 0.0);
+	//raw.rotate(90, vec3(0, 1, 0));
 
 	// Initialize the stack
 	transfstack.push(mat4(1.0)) ;
@@ -545,7 +558,8 @@ void display() {
 			}
 		}
 
-		obj.draw();
+		//obj.draw(1, 1, 0, 1);
+		//raw.draw(1, 0, 0, 1);
 
 	glutSwapBuffers();
 }
