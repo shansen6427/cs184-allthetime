@@ -456,9 +456,10 @@ void init() {
 	//obj.translate(0.0, 0.5, 0.0);
 
 	// initialize .raw reader
-	//raw.init("test.raw");
-	//raw.moveToCenter();
-	//raw.scale(2.0, 2.0, 2.0);
+	raw.init("guy.raw");
+	raw.moveToCenter();
+	//raw.scale(0.06, 0.06, 0.06);
+	raw.scale(0.001, 0.001, 0.001);
 	//raw.translate(0.0, 1, 0.0);
 	//raw.rotate(90, vec3(0, 1, 0));
 
@@ -559,7 +560,7 @@ void display() {
 		}
 
 		//obj.draw(1, 1, 0, 1);
-		//raw.draw(1, 0, 0, 1);
+		raw.draw(1, 0, 0, 1);
 
 	glutSwapBuffers();
 }
