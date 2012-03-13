@@ -13,6 +13,9 @@
 #include <vector>
 #include <math.h>
 #include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
 #include <GL/glew.h>
 #include <GL/glut.h>
 #include "shaders.h"
@@ -114,6 +117,8 @@ bool board_ready ;
 float block_velocity ; // Negative will reveal the block
 const float block_speed = 0.5 ; 
 float wheel_angle ;
+float idle_angle ;
+const float idle_speed = 1.0 ;
 float wheel_speed ;
 const float wheel_decel = -0.01 ;
 const float init_wheel_speed = 5.0 ;
@@ -124,6 +129,22 @@ int spin_points ;
 const vec3 play_location = vec3(1.5, -4.0, 1.0) ;
 const vec3 board_location = vec3(2.5, 0.0, 1.0) ;
 const float play_radius = 0.5 ;
+
+bool fill_or_wire ;
+bool lighting = true ;
+// static GLuint texture ;
+
+GLubyte marbletexture[256][256][3] ;
+GLubyte woodtexture[256][256][3] ;
+GLubyte signtexture[1200][600][3] ;
+GLubyte baytexture[640][320][3] ;
+GLubyte towertexture[500][250][3] ;
+GLubyte stuccotexture[160][160][3] ;
+GLuint texNames[6] ; // ** NEW ** texture buffer
+GLuint istex ;  // ** NEW ** blend parameter for texturing
+GLint texturing = 1 ; // ** NEW ** to turn on/off texturing
+
+#include "geometry.h"
 
 // TODO: Introduce a constant Z-height, change accordingly in functions
 
@@ -423,6 +444,7 @@ void startGame() {
 void altKeyboard(unsigned char key, int x, int y){
 	if (transop == play) {
 		if (key == 27) {
+			in_game = false ;
 			transop = view ;
 			resetCamera() ;
 			resetRotations() ;
@@ -512,6 +534,18 @@ void altKeyboard(unsigned char key, int x, int y){
 			saveResets() ; // Maintain "true" position during zooming
 			std::cout << "Operation is set to Zoom\n" ;
 			break ;
+		case 'f':
+			fill_or_wire = !fill_or_wire ;
+			std::cout << "Switching to " << ((fill_or_wire) ? "fill" : "wireframe") << " rendering." << std::endl ;
+			break ;
+		case 't':
+			texturing = !texturing ;
+			std::cout << "Textures " << ((texturing) ? "ON" : "OFF") << std::endl ;
+			break ;
+		case 'l':
+			lighting = !lighting ;
+			std::cout << "Lighting " << ((lighting) ? "ON" : "OFF") << std::endl ;
+			break ;
 		case 'p':
 			float dist_to_play = QPrint::magv(eye - play_location) ;
 			vec3 distboard_vec = board_location - eye ;
@@ -524,7 +558,7 @@ void altKeyboard(unsigned char key, int x, int y){
 			}
 			break ;
 		}
-		if (key != 'z' && key != 32) {
+		if (key == 'q' || key == 'w' || key == 'e' || key == 'a' || key == 's' || key == 'd') {
 			scanKeys("set", key, true) ; // Mark the key as active
 		}
 	}
@@ -715,13 +749,20 @@ void init() {
 	wheel_speed = 0.0f ;
 	spinning = false ;
 	has_spun = false ;
-
 	srand((unsigned) time(0)) ;
+
+	// glGenBuffers(numperobj*numobjects+ncolors+1, buffers) ; // 1 for texcoords 
+    // initcolorscube() ; 
+	inittexture(shaderprogram) ;
+
+	// initobject(FLOOR, (GLfloat *) floorverts, sizeof(floorverts), (GLfloat *) floorcol, sizeof (floorcol), (GLubyte *) floorinds, sizeof (floorinds), GL_POLYGON) ; 
+    // initobjectnocol(CUBE, (GLfloat *) cubeverts, sizeof(cubeverts), (GLubyte *) cubeinds, sizeof (cubeinds), GL_QUADS) ; 
 
 	// Initialize the stack
 	transfstack.push(mat4(1.0)) ;
 
-	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_DEPTH_TEST) ;
+	glDepthFunc(GL_LESS) ;
 
   // The lighting is enabled using the same framework as in mytest 3 
   // Except that we use two point lights
@@ -731,7 +772,8 @@ void init() {
     vertexshader = initshaders(GL_VERTEX_SHADER, "shaders/light.vert.glsl") ;
     fragmentshader = initshaders(GL_FRAGMENT_SHADER, "shaders/light.frag.glsl") ;
     shaderprogram = initprogram(vertexshader, fragmentshader) ; 
-    islight = glGetUniformLocation(shaderprogram,"islight") ;        
+    islight = glGetUniformLocation(shaderprogram,"islight") ;
+	istex = glGetUniformLocation(shaderprogram, "istex") ;
 	
 	char name[20] ;
 	for (int i = 0; i < 10; i++) {
@@ -762,6 +804,12 @@ void display() {
 	glClearColor(0, 0, 1, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glBindTexture (GL_TEXTURE_2D, texNames[1]) ; 
+	glUniform1i(istex, texturing) ; 
+		// drawtexture(FLOOR, texNames[0]) ; // Texturing floor 
+		// Shapes::cube(1.0) ;
+		Shapes::plane(10.0, 10.0, 1) ;
+	glUniform1i(istex, 0) ;
 
 	glMatrixMode(GL_MODELVIEW);
 	mat4 mv ;
@@ -833,7 +881,7 @@ void display() {
 		tr = Transform::translate(tx,ty,0.0) ;
 		// Multiply the matrices, accounting for OpenGL and GLM.
 		sc = glm::transpose(sc) ; tr = glm::transpose(tr) ;
-		for (unsigned int i = 0; i < 1; i++) {// < objects.size() ; i++) {
+		for (unsigned int i = 0; i < objects.size() ; i++) {
 			mat4 objMat = glm::transpose(objTransforms[i]) ;
 			mat4 transf = mv * tr * sc * objMat ;
 			glLoadMatrixf(&transf[0][0]) ; 
@@ -856,7 +904,7 @@ void display() {
 			glUniform1i(islight,true) ;
 			
 			float size = objSize[i] ;
-
+			/*
 			if (!objects[i].compare("teapot")) {
 				glutSolidTeapot(size);
 			} else if (!objects[i].compare("sphere")) {
@@ -864,6 +912,7 @@ void display() {
 			} else if (!objects[i].compare("cube")) {
 				glutSolidCube(size) ;
 			}
+			*/
 		}
 
 	glLoadMatrixf(&mv[0][0]) ;
@@ -872,36 +921,229 @@ void display() {
 	testrotate -= .3 ;
 	if (testrotate > 360) testrotate = 0 ;
 	glRotatef(testrotate, 1.0, 0.0, 0.0) ;
-	glutSolidCube(.10) ;
+	glutSolidCube(.20) ;
 	glPopMatrix() ;
+
+	// Textured materials
+	glUniform1i(istex, texturing) ;
+	// Right wall
+	glBindTexture(GL_TEXTURE_2D, texNames[2]) ; 
+	glPushMatrix() ; 
+		glTranslatef(5.0,0.0,2.4) ; 
+		Shapes::plane(10.0f, 5.0f, 6) ;
+    glPopMatrix() ; 
+	// Front wall
+	glBindTexture(GL_TEXTURE_2D, texNames[3]) ; 
+	glPushMatrix() ; 
+		glTranslatef(0.0,5.0,2.4) ; 
+		Shapes::plane(10.0f, 5.0f, 3) ;
+    glPopMatrix() ; 
+	// Back wall
+	glBindTexture(GL_TEXTURE_2D, texNames[4]) ;
+	glPushMatrix() ; 
+		glTranslatef(0.0,-5.0,2.4) ; 
+		Shapes::plane(10.0f, 5.0f, 4) ;
+    glPopMatrix() ; 
+	// Ceiling
+	glBindTexture(GL_TEXTURE_2D, texNames[5]) ;
+	glPushMatrix() ; 
+		glTranslatef(0.0,0.0,4.8) ; 
+		Shapes::plane(10.0f, 10.0f, 2) ;
+    glPopMatrix() ; 
+
+	glUniform1i(istex, 0) ;
+	// Left Wall
+	float black[4] = {0.0, 0.0, 0.0, 1.0} ;
+	float no_spec[4] = {0.1, 0.1, 0.1, 1.0} ;
+	float spec[4] = {1.0, 1.0, 1.0, 1.0} ;
+	glUniform4fv(diffuse, 1, black) ;
+	glUniform4fv(specular, 1, no_spec) ;
+	glPushMatrix() ; 
+		glTranslatef(-5.0,0.0,2.4) ; 
+		Shapes::plane(10.0f, 5.0f, 5) ;
+    glPopMatrix() ; 
+	glUniform4fv(specular, 1, spec) ;
+
+	/*
+	glPushMatrix() ;
+	glTranslatef(0.0, 0.0, 5.0) ;
+	Shapes::plane(10.0, 10.0, 1) ;
+	glPopMatrix() ; 
+	*/
 
 	// Wheel and base properties
 	float base_height = 0.4 ;
+	float middle_base_height = base_height * .75 ;
+	float bottom_base_height = middle_base_height / 2 ;
 	float base_x = 1.5 ;
 	float base_y = -1.5 ;
 	float base_radius = 0.5 ;
+	float middle_base_radius = base_radius + .1 ;
+	float bottom_base_radius = base_radius + .2 ;
+	float desk_height = base_height + .1 ;
+	float desk_inner = bottom_base_radius ;
+	float desk_width = .2 ;
+	float desk_outer = desk_inner + .2 ;
+	int desk_angle1 = -160 ;
+	int desk_angle2 = -20 ;
 	float wheel_radius = base_radius + .01 ; // Make the wheel slightly larger than its base
+	float desk_blue[4] = {0.0, 0.0, 1.0, 1.0} ;
 	float wheel_red[4] = {1.0, 0.0, 0.0, 1.0} ;
 	float wheel_green[4] = {0.0, 1.0, 0.0, 1.0} ;
 	float wheel_blue[4] = {0.0, 0.0, 1.0, 1.0} ;
 	float wheel_yellow[4] = {1.0, 1.0, 0.0, 1.0} ;
 	float wheel_white[4] = {1.0, 1.0, 1.0, 1.0} ; // Color for sticks of wheel
+	float base_gray[4] = {0.47, 0.53, 0.59, 1.0} ;
 	int color_cycle = 0 ; // Variable for determining color of strip
 	float stick_height = 0.16 ;
 
-	// Draw the base
+	// Upper base
+	glUniform4fv(diffuse, 1, base_gray) ;
 	glPushMatrix() ;
 	glTranslatef(base_x, base_y, 0.0) ;
 	glBegin(GL_QUAD_STRIP) ;
 		for (int i = 0; i <= 360; i++) {
 			float theta = (float) i * pi / 180.0f ;
-			glVertex3f(base_radius * cos(theta), base_radius * sin(theta), 0.0) ;
+			glNormal3f(cos(theta), sin(theta), 0.0) ;
+			glVertex3f(base_radius * cos(theta), base_radius * sin(theta), middle_base_height) ;
 			glVertex3f(base_radius * cos(theta), base_radius * sin(theta), base_height) ;
 		}
 	glEnd() ;
-	
+
+	// Middle base
+	glUniform4fv(diffuse, 1, wheel_green) ;
+	glBegin(GL_QUAD_STRIP) ;
+		for (int i = 0; i <= 360; i++) {
+			float theta = (float) i * pi / 180.0f ;
+			glNormal3f(cos(theta), sin(theta), 0.0) ;
+			glVertex3f(middle_base_radius * cos(theta), middle_base_radius * sin(theta), bottom_base_height) ;
+			glVertex3f(middle_base_radius * cos(theta), middle_base_radius * sin(theta), middle_base_height) ;
+		}
+	glEnd() ;
+
+	// Middle top
+	glBegin(GL_TRIANGLE_FAN) ;
+		glVertex3f(0.0f, 0.0f, middle_base_height) ;
+		for (int i = 0; i <= 360; i++) {
+			float theta = (float) i * pi / 180.0f ;
+			glNormal3f(0.0, 0.0, 1.0f) ;
+			glVertex3f(middle_base_radius * cos(theta), middle_base_radius * sin(theta), middle_base_height) ;
+		}
+	glEnd() ;
+
+	// Bottom base
+	glBegin(GL_QUAD_STRIP) ;
+		for (int i = 0; i <= 360; i++) {
+			float theta = (float) i * pi / 180.0f ;
+			glNormal3f(cos(theta), sin(theta), 0.0) ;
+			glVertex3f(bottom_base_radius * cos(theta), bottom_base_radius * sin(theta), 0.0) ;
+			glVertex3f(bottom_base_radius * cos(theta), bottom_base_radius * sin(theta), bottom_base_height) ;
+		}
+	glEnd() ;
+
+	// Bottom top
+	glBegin(GL_TRIANGLE_FAN) ;
+		glVertex3f(0.0f, 0.0f, bottom_base_height) ;
+		for (int i = 0; i <= 360; i++) {
+			float theta = (float) i * pi / 180.0f ;
+			glNormal3f(0.0, 0.0, 1.0f) ;
+			glVertex3f(bottom_base_radius * cos(theta), bottom_base_radius * sin(theta), bottom_base_height) ;
+		}
+	glEnd() ;
+
+	glUniform4fv(diffuse, 1, desk_blue) ;
+	// Inner edge
+	glBegin(GL_QUAD_STRIP) ;
+		for (int i = desk_angle1; i <= desk_angle2; i++) {
+			float theta = (float) i * pi / 180.0f ;
+			glNormal3f(cos(theta), sin(theta), 0.0) ;
+			glVertex3f(desk_inner * cos(theta), desk_inner * sin(theta), 0.0) ;
+			glVertex3f(desk_inner * cos(theta), desk_inner * sin(theta), desk_height) ;
+		}
+	glEnd() ;
+
+	// Outer edge
+	glBegin(GL_QUAD_STRIP) ;
+		for (int i = desk_angle1; i <= desk_angle2; i++) {
+			float theta = (float) i * pi / 180.0f ;
+			glNormal3f(cos(theta), sin(theta), 0.0) ;
+			glVertex3f(desk_outer * cos(theta), desk_outer * sin(theta), 0.0) ;
+			glVertex3f(desk_outer * cos(theta), desk_outer * sin(theta), desk_height) ;
+		}
+	glEnd() ;
+
+	// Desk top
+	glBegin(GL_QUAD_STRIP) ;
+		for (int i = desk_angle1; i <= desk_angle2; i++) {
+			float theta = (float) i * pi / 180.0f ;
+			glNormal3f(0.0f, 0.0f, 1.0f) ;
+			glVertex3f(desk_inner * cos(theta), desk_inner * sin(theta), desk_height) ;
+			glVertex3f(desk_outer * cos(theta), desk_outer * sin(theta), desk_height) ;
+		}
+	glEnd() ;
+
+	glBegin(GL_QUADS) ;
+		float theta1 = (float) desk_angle1 * pi / 180.0f ;
+		float theta2 = (float) desk_angle2 * pi / 180.0f ;
+
+		glNormal3f(sin(theta1), -cos(theta1), 0.0) ;
+		glVertex3f(desk_inner * cos(theta1), desk_inner * sin(theta1), 0.0) ;
+		glVertex3f(desk_outer * cos(theta1), desk_outer * sin(theta1), 0.0) ;
+		glVertex3f(desk_outer * cos(theta1), desk_outer * sin(theta1), desk_height) ;
+		glVertex3f(desk_inner * cos(theta1), desk_inner * sin(theta1), desk_height) ;
+
+		glNormal3f(sin(theta2), -cos(theta2), 0.0) ;
+		glVertex3f(desk_inner * cos(theta2), desk_inner * sin(theta2), 0.0) ;
+		glVertex3f(desk_outer * cos(theta2), desk_outer * sin(theta2), 0.0) ;
+		glVertex3f(desk_outer * cos(theta2), desk_outer * sin(theta2), desk_height) ;
+		glVertex3f(desk_inner * cos(theta2), desk_inner * sin(theta2), desk_height) ;
+	glEnd() ;
+
+	glUniform4fv(diffuse, 1, black) ;
+	float strip_height = base_height - middle_base_height ;
+	float strip_width = 0.05 ;
+	// Indicator strip on top base
+	glPushMatrix() ;
+		glTranslatef(0.0, 0.0, (base_height + middle_base_height) / 2) ;
+		if (in_game) {
+			glRotatef(wheel_angle, 0.0, 0.0, 1.0) ;
+		} else {
+			glRotatef(idle_angle, 0.0, 0.0, 1.0) ;
+		}
+		glBegin(GL_QUADS) ;
+			glVertex3f(-base_radius - .005, strip_width / 2, -strip_height / 2) ;
+			glVertex3f(-base_radius - .005, -strip_width / 2, -strip_height / 2) ;
+			glVertex3f(-base_radius - .005, -strip_width / 2, strip_height / 2) ;
+			glVertex3f(-base_radius - .005, strip_width / 2, strip_height / 2) ;
+
+			glVertex3f(base_radius + .005, strip_width / 2, -strip_height / 2) ;
+			glVertex3f(base_radius + .005, -strip_width / 2, -strip_height / 2) ;
+			glVertex3f(base_radius + .005, -strip_width / 2, strip_height / 2) ;
+			glVertex3f(base_radius + .005, strip_width / 2, strip_height / 2) ;
+
+			glVertex3f(strip_width / 2, base_radius + .005, -strip_height / 2) ;
+			glVertex3f(-strip_width / 2, base_radius + .005, -strip_height / 2) ;
+			glVertex3f(-strip_width / 2, base_radius + .005, strip_height / 2) ;
+			glVertex3f(strip_width / 2, base_radius + .005, strip_height / 2) ;
+
+			glVertex3f(strip_width / 2, -base_radius - .005, -strip_height / 2) ;
+			glVertex3f(-strip_width / 2, -base_radius - .005, -strip_height / 2) ;
+			glVertex3f(-strip_width / 2, -base_radius - .005, strip_height / 2) ;
+			glVertex3f(strip_width / 2, -base_radius - .005, strip_height / 2) ;
+
+		glEnd() ;
+	glPopMatrix() ;
+
+
 	glTranslatef(0.0, 0.0, base_height) ; // Place wheel on top of base
-	glRotatef(wheel_angle, 0.0, 0.0, 1.0) ;
+	// Have wheel spin idly until game starts
+	if (in_game) {
+		glRotatef(wheel_angle, 0.0, 0.0, 1.0) ;
+	} else {
+		glRotatef(idle_angle, 0.0, 0.0, 1.0) ;
+	}
+	idle_angle += idle_speed ;
+	if (idle_angle >= 360) idle_angle = 0 ; 
 	wheel_angle += wheel_speed ;
 	if (wheel_speed > 0) wheel_speed += wheel_decel ;
 	if (wheel_speed < 0) {
@@ -943,24 +1185,34 @@ void display() {
 	}
 	glPopMatrix() ;
 
+	// Seats
+	glPushMatrix() ;
+		glutSolidCube(1.0) ;
+	glPopMatrix() ;
+
 	// Board properties
 	float z_scale = 1.3 ;
 	float letter_scale = 0.8 ;
 	float block_size = 0.3 ;
-	float spacing = 0.05 ;
+	float spacing = 0.02 ;
 	float border_diffuse[4] = {0.0, 1.0, 0.0, 1.0} ;
 	float block_diffuse[4] = {1.0, 1.0, 1.0, 1.0} ;
 	float letter_diffuse[4] = {0.0, 0.0, 0.0, 1.0} ;
 
 	// TODO: Draw separators
+	// TODO: Choose something for wireframe
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 
 	// Draw the static board
 	float startx = 1.0 ;
 	float starty = 0.0 ;
 	float startz = block_size * z_scale / 2 ;
 	float xpos, ypos, zpos ;
-	glPushMatrix() ;
 	glUniform4fv(diffuse, 1, border_diffuse) ;
+	glBindTexture (GL_TEXTURE_2D, texNames[0]) ; 
+	glUniform1i(istex, texturing) ;
+	glPushMatrix() ;
 	for (int i = 0 ; i < 10 ; i++) {
 		for (int j = 0 ; j < 4 ; j++) {
 			if (j == 1 && (i != 0 && i != 8 && i != 9)) continue ;
@@ -971,12 +1223,14 @@ void display() {
 			glPushMatrix() ;
 			glTranslatef(xpos, ypos, zpos) ;
 			glScalef(1.0, 1.0, z_scale) ;
-			glutSolidCube(block_size) ;
+			// glutSolidCube(block_size) ;
+			Shapes::cube(block_size) ;
 			glPopMatrix() ;
 		}
 	}
 	glPopMatrix() ;
-
+	glUniform1i(istex, 0) ;
+	
 	// Increase the rotation on active blocks
 	int inactive_count = 0 ;
 	for (int i = 0; i < 14; i++) {
@@ -1034,6 +1288,7 @@ void display() {
 	}
 
 	glutSwapBuffers();
+	glFlush();
 }
 
 void stopInvalid() {

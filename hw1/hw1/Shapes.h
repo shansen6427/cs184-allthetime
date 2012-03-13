@@ -20,4 +20,6 @@ public:
 	static void printOuterU() ;
 	static void printInnerU() ;
 	static void printW() ;
+	static void cube(float size) ;
+	static void plane(float length, float width, int orientation) ;
 };

@@ -1,5 +1,6 @@
 // Shapes.cpp: Implementation of Shapes class.
 
+#include <iostream>
 #include <GL/glew.h>
 #include <GL/glut.h>
 #include <math.h>
@@ -382,6 +383,103 @@ void Shapes::printW() {
 		glVertex3f(0.3, 0.0, 0.5) ;
 		glVertex3f(0.2, 0.0, -0.5) ;
 		glVertex3f(0.4, 0.0, -0.5) ;
+	glEnd() ;
+}
+
+void Shapes::cube(float size) {
+	float len = size / 2 ;
+	glBegin(GL_QUADS) ;
+		glNormal3f(0.0, 0.0, 1.0) ; // Top
+		glTexCoord2f(0.0f, 0.0f) ; glVertex3f(-len, -len,  len) ;
+		glTexCoord2f(1.0f, 0.0f) ; glVertex3f( len, -len,  len) ;
+		glTexCoord2f(1.0f, 1.0f) ; glVertex3f( len,  len,  len) ;
+		glTexCoord2f(0.0f, 1.0f) ; glVertex3f(-len,  len,  len) ;
+
+		glNormal3f(0.0, 0.0, -1.0) ; // Bottom
+		glTexCoord2f(0.0f, 0.0f) ; glVertex3f(-len, -len,  -len) ;
+		glTexCoord2f(1.0f, 0.0f) ; glVertex3f( len, -len,  -len) ;
+		glTexCoord2f(1.0f, 1.0f) ; glVertex3f( len,  len,  -len) ;
+		glTexCoord2f(0.0f, 1.0f) ; glVertex3f(-len,  len,  -len) ;
+
+		glNormal3f(0.0, -1.0, 0.0) ; // Front
+		glTexCoord2f(0.0f, 0.0f) ; glVertex3f(-len, -len,  -len) ;
+		glTexCoord2f(1.0f, 0.0f) ; glVertex3f( len, -len,  -len) ;
+		glTexCoord2f(1.0f, 1.0f) ; glVertex3f( len, -len,  len) ;
+		glTexCoord2f(0.0f, 1.0f) ; glVertex3f(-len, -len,  len) ;
+
+		glNormal3f(0.0, 1.0, 0.0) ; // Back
+		glTexCoord2f(0.0f, 0.0f) ; glVertex3f(-len, len,  -len) ;
+		glTexCoord2f(1.0f, 0.0f) ; glVertex3f( len, len,  -len) ;
+		glTexCoord2f(1.0f, 1.0f) ; glVertex3f( len, len,  len) ;
+		glTexCoord2f(0.0f, 1.0f) ; glVertex3f(-len, len,  len) ;
+
+		glNormal3f(-1.0, 0.0, 0.0) ; // Side
+		glTexCoord2f(0.0f, 0.0f) ; glVertex3f(-len, -len,  -len) ;
+		glTexCoord2f(1.0f, 0.0f) ; glVertex3f(-len, len,  -len) ;
+		glTexCoord2f(1.0f, 1.0f) ; glVertex3f(-len, len,  len) ;
+		glTexCoord2f(0.0f, 1.0f) ; glVertex3f(-len, -len,  len) ;
+
+		glNormal3f(1.0, 0.0, 0.0) ; // Side
+		glTexCoord2f(0.0f, 0.0f) ; glVertex3f(len, -len,  -len) ;
+		glTexCoord2f(1.0f, 0.0f) ; glVertex3f(len, len,  -len) ;
+		glTexCoord2f(1.0f, 1.0f) ; glVertex3f(len, len,  len) ;
+		glTexCoord2f(0.0f, 1.0f) ; glVertex3f(len, -len,  len) ;
+
+	glEnd() ;
+}
+
+void Shapes::plane(float length, float width, int orientation) {
+	float repeat_factor = 10.0f ; // For floor and ceiling
+	glBegin(GL_QUADS) ;
+		// 1 up, 2 down, 3 front, 4 back, 5 right, 6 left
+		float xcoord, ycoord, zcoord ;
+		if (orientation == 1) {
+			xcoord = length / 2 ;
+			ycoord = width / 2 ;
+			zcoord = 0.0f ;
+			glNormal3f(0.0f, 0.0f, 1.0f) ; 
+		} else if (orientation == 2) {
+			xcoord = -length / 2 ;
+			ycoord = width / 2 ;
+			zcoord = 0.0f ;
+			glNormal3f(0.0f, 0.0f, -1.0f) ;
+		} else if (orientation == 3) {
+			xcoord = length / 2 ;
+			ycoord = 0.0f ;
+			zcoord = width / 2 ;
+			glNormal3f(0.0f, -1.0f, 0.0f) ;
+		} else if (orientation == 4) {
+			xcoord = -length / 2 ;
+			ycoord = 0.0f ;
+			zcoord = width / 2 ;
+			glNormal3f(0.0f, 1.0f, 0.0f) ;
+		} else if (orientation == 5) {
+			xcoord = 0.0f ;
+			ycoord = length / 2 ;
+			zcoord = width / 2 ;
+			glNormal3f(1.0f, 0.0f, 0.0f) ;
+		} else if (orientation == 6) {
+			xcoord = 0.0f ;
+			ycoord = -length / 2 ;
+			zcoord = width / 2 ;
+			glNormal3f(-1.0f, 0.0f, 0.0f) ;
+		}
+		if (zcoord == 0.0f) {
+			glTexCoord2f(0.0f, 0.0f) ; glVertex3f(-xcoord, ycoord, 0.0f) ;
+			glTexCoord2f(repeat_factor, 0.0f) ; glVertex3f(xcoord, ycoord, 0.0f) ;
+			glTexCoord2f(repeat_factor, repeat_factor) ; glVertex3f(xcoord, -ycoord, 0.0f) ;
+			glTexCoord2f(0.0f, repeat_factor) ; glVertex3f(-xcoord, -ycoord, 0.0f) ;
+		} else if (ycoord == 0.0f) {
+			glTexCoord2f(0.0f, 0.0f) ; glVertex3f(-xcoord, 0.0f, zcoord) ;
+			glTexCoord2f(1.0f, 0.0f) ; glVertex3f(xcoord, 0.0f, zcoord) ;
+			glTexCoord2f(1.0f, 1.0f) ; glVertex3f(xcoord, 0.0f, -zcoord) ;
+			glTexCoord2f(0.0f, 1.0f) ; glVertex3f(-xcoord, 0.0f, -zcoord) ;
+		} else if (xcoord == 0.0f) {
+			glTexCoord2f(0.0f, 0.0f) ; glVertex3f(0.0f, -ycoord, zcoord) ;
+			glTexCoord2f(1.0f, 0.0f) ; glVertex3f(0.0f, ycoord, zcoord) ;
+			glTexCoord2f(1.0f, 1.0f) ; glVertex3f(0.0f, ycoord, -zcoord) ;
+			glTexCoord2f(0.0f, 1.0f) ; glVertex3f(0.0f, -ycoord, -zcoord) ;
+		}
 	glEnd() ;
 }
 
