@@ -12,6 +12,8 @@ varying vec4 myvertex ;
 
 uniform int islight ; // are we lighting. 
 
+uniform int isperturbed; // perturb normals?
+
 //OREO
 uniform vec4 lightposn[10] ;
 uniform vec4 lightcolor[10] ;
@@ -27,6 +29,23 @@ uniform vec4 diffuse ;
 uniform vec4 specular ; 
 uniform vec4 emission ;
 uniform float shininess ; 
+
+vec3 perturbNormal(vec3 normal){
+	float radius = 1.0;
+
+	float v = asin(myvertex.z / radius);
+	float u = asin(myvertex.x/(radius * cos(v)));
+
+	float dx = sin(20 * u);
+	float dy = cos(20 * v);
+	float dz = tan(20 * u * v);
+	
+	normal.x += dx;
+	normal.y += dy;
+	normal.z += dz;
+
+	return normalize(normal);
+}
 
 vec4 ComputeLight (const in vec3 direction, const in vec4 lightcolor, const in vec3 normal, const in vec3 halfvec, const in vec4 mydiffuse, const in vec4 myspecular, const in float myshininess) {
 
@@ -56,6 +75,8 @@ void main (void)
         // Simpler is vec3 normal = normalize(gl_NormalMatrix * mynormal) ; 
         vec3 _normal = (gl_ModelViewMatrixInverseTranspose*vec4(mynormal,0.0)).xyz ; 
         vec3 normal = normalize(_normal) ; 
+
+		if(isperturbed != 0)	normal = perturbNormal(normal);
 
         // Light 0, point
         // vec3 position0 = light0posn.xyz / light0posn.w ; 

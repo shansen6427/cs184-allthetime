@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <GL/glew.h>
+#include <gl/glut.h>
 
 rawReader::rawReader(){
 }
@@ -78,6 +79,42 @@ rawReader::draw(const float &red, const float &green, const float &blue, const f
 
 		glBegin(GL_TRIANGLES);
 			glColor4f(red, green, blue, alpha);
+			glNormal3f(normal.x, normal.y, normal.z);
+			glVertex3f(vert1.x, vert1.y, vert1.z);
+			glVertex3f(vert2.x, vert2.y, vert2.z);
+			glVertex3f(vert3.x, vert3.y, vert3.z);
+		glEnd();
+	}
+}
+
+void
+rawReader::alt_draw(void* ambient, void* diffuse, void* specular, void* emission, void* shininess, void* islight, void* isperturbed){
+	vec3 vert1, vert2, vert3;
+	vec3 veca, vecb, normal;
+	float amb[4] = {0.2, 0.2, 0.2, 1.0};
+	float dif[4] = {0.8, 0.1, 0.3, 1.0};
+	float spec[4] = {0.6, 0.6, 0.6, 1.0};
+	float ems[4] = {0.0, 0.0, 0.0, 1.0};
+	float shn = 0.5;
+	for(unsigned int m = 0; m < vertices.size(); m += 3){
+		vert1 = vertices[m];
+		vert2 = vertices[m + 1];
+		vert3 = vertices[m + 2];
+
+		veca = vec3(vert2.x - vert1.x, vert2.y - vert1.y, vert2.z - vert1.z);
+		vecb = vec3(vert3.x - vert1.x, vert3.y - vert1.y, vert3.z - vert1.z);
+		normal = glm::normalize(veca * vecb);
+
+		glUniform4fv((GLuint)&ambient,1, amb) ; 
+		glUniform4fv((GLuint)&diffuse,1, dif) ; 
+		glUniform4fv((GLuint)&specular,1, spec) ; 
+		glUniform4fv((GLuint)&emission,1, ems) ;
+		glUniform1fv((GLuint)&shininess,1, &shn) ; 
+		glUniform1i((GLuint)&islight,true) ;
+		glUniform1i((GLuint)&isperturbed, false);
+
+		glBegin(GL_TRIANGLES);
+			//glColor4f(0.8, 0.3, 0.1, 1.0);
 			glNormal3f(normal.x, normal.y, normal.z);
 			glVertex3f(vert1.x, vert1.y, vert1.z);
 			glVertex3f(vert2.x, vert2.y, vert2.z);

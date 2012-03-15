@@ -14,6 +14,7 @@ public:
 	rawReader();
 	int init(const char* filename);
 	void draw(const float &red, const float &green, const float &blue, const float &alpha);
+	void alt_draw(void* ambient, void* diffuse, void* specular, void* emission, void* shininess, void* islight, void* isperturbed);
 	void moveToCenter();
 	void rotate(const float degrees, const vec3& axis) ;
     void scale(const float &sx, const float &sy, const float &sz) ; 

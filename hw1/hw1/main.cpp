@@ -6,6 +6,8 @@
 /**
  *  Anubis_alienado.obj provided for free download by www.themovies3d.com, model creation
  * and distribution provided by Scopia Visual Interfaces Systems, s.l. (http://www.scopia.es)
+ *  guy.raw and ship.raw (originally "BOY N080409.3DS" and "SHIP N010708.3DS") provided by
+ * archive3d.net for non-commercial use
  */
 
 #include "stdafx.h"
@@ -37,8 +39,6 @@ int w, h; // width and height
 float zNear, zFar ;
 float fovy ;
 GLuint vertexshader, fragmentshader, shaderprogram ; // shaders
-
-// !!!
 GLuint lam_vertexshader, lam_fragmentshader, lam_shaderprogram; // alternate shaders
 
 static enum {view, translate, scale, zoom} transop ; // which operation to transform by 
@@ -81,6 +81,8 @@ GLuint diffuse ;
 GLuint specular ; 
 GLuint emission ;
 GLuint shininess ;
+
+GLuint isperturbed;
 
 // MICE
 int mouseoldx, mouseoldy ;
@@ -426,9 +428,11 @@ void mousedrag(int x, int y) {
 
 void switchShader(bool lambert){
 	if(lambert){
-		islight = glGetUniformLocation(lam_shaderprogram,"islight") ;        
 		//std::cout << "Now using lambertian shader" << std::endl;
 	
+		islight = glGetUniformLocation(lam_shaderprogram,"islight") ; 
+		isperturbed = glGetUniformLocation(lam_shaderprogram,"isperturbed") ; 
+		
 		char name[20] ;
 		for (int i = 0; i < 10; i++) {
 			sprintf(name, "lightposn[%d]", i) ;
@@ -444,10 +448,11 @@ void switchShader(bool lambert){
 		emission = glGetUniformLocation(lam_shaderprogram,"emission") ; 
 		shininess = glGetUniformLocation(lam_shaderprogram,"shininess") ;
 	}else{
-		islight = glGetUniformLocation(shaderprogram,"islight") ;   
-
 		//std::cout << "Now using standard shader" << std::endl;
 	
+		islight = glGetUniformLocation(shaderprogram,"islight") ;   
+		isperturbed = glGetUniformLocation(shaderprogram,"isperturbed") ;   
+		
 		char name[20] ;
 		for (int i = 0; i < 10; i++) {
 			sprintf(name, "lightposn[%d]", i) ;
@@ -527,6 +532,8 @@ void init() {
     shaderprogram = initprogram(vertexshader, fragmentshader) ; 
     islight = glGetUniformLocation(shaderprogram,"islight") ;        
 	
+    isperturbed = glGetUniformLocation(shaderprogram,"isperturbed") ;        
+	
 	char name[20] ;
 	for (int i = 0; i < 10; i++) {
 		sprintf(name, "lightposn[%d]", i) ;
@@ -597,6 +604,8 @@ void display() {
 			glUniform4fv(emission,1,tempEmission) ;
 			glUniform1fv(shininess,1,tempShininess) ; 
 			glUniform1i(islight,true) ;
+
+			glUniform1i(isperturbed, false);
 			
 			float size = objSize[i] ;
 
@@ -611,7 +620,8 @@ void display() {
 
 		//switchShader(false);
 		//obj.draw(1, 1, 0, 1);
-		raw.draw(1, 0, 0, 1);
+		//raw.draw(1, 0, 0, 1);
+		//raw.alt_draw(&ambient, &diffuse, &specular, &emission, &shininess, &islight, &isperturbed);
 
 	glutSwapBuffers();
 }
