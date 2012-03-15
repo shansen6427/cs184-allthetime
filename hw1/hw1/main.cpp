@@ -37,6 +37,10 @@ int w, h; // width and height
 float zNear, zFar ;
 float fovy ;
 GLuint vertexshader, fragmentshader, shaderprogram ; // shaders
+
+// !!!
+GLuint lam_vertexshader, lam_fragmentshader, lam_shaderprogram; // alternate shaders
+
 static enum {view, translate, scale, zoom} transop ; // which operation to transform by 
 float sx, sy ; // the scale in x and y 
 float tx, ty ; // the translation in x and y
@@ -420,6 +424,47 @@ void mousedrag(int x, int y) {
 }
 // MICE
 
+void switchShader(bool lambert){
+	if(lambert){
+		islight = glGetUniformLocation(lam_shaderprogram,"islight") ;        
+		//std::cout << "Now using lambertian shader" << std::endl;
+	
+		char name[20] ;
+		for (int i = 0; i < 10; i++) {
+			sprintf(name, "lightposn[%d]", i) ;
+			lightposn[i] = glGetUniformLocation(lam_shaderprogram, name) ;
+			sprintf(name, "lightcolor[%d]", i) ;
+			lightcolor[i] = glGetUniformLocation(lam_shaderprogram, name) ;
+		}
+		lightcount = glGetUniformLocation(lam_shaderprogram,"lightcount") ;
+
+		ambient = glGetUniformLocation(lam_shaderprogram,"ambient") ;           
+		diffuse = glGetUniformLocation(lam_shaderprogram,"diffuse") ;          
+		specular = glGetUniformLocation(lam_shaderprogram,"specular") ; 
+		emission = glGetUniformLocation(lam_shaderprogram,"emission") ; 
+		shininess = glGetUniformLocation(lam_shaderprogram,"shininess") ;
+	}else{
+		islight = glGetUniformLocation(shaderprogram,"islight") ;   
+
+		//std::cout << "Now using standard shader" << std::endl;
+	
+		char name[20] ;
+		for (int i = 0; i < 10; i++) {
+			sprintf(name, "lightposn[%d]", i) ;
+			lightposn[i] = glGetUniformLocation(shaderprogram, name) ;
+			sprintf(name, "lightcolor[%d]", i) ;
+			lightcolor[i] = glGetUniformLocation(shaderprogram, name) ;
+		}
+		lightcount = glGetUniformLocation(shaderprogram,"lightcount") ;
+
+		ambient = glGetUniformLocation(shaderprogram,"ambient") ;           
+		diffuse = glGetUniformLocation(shaderprogram,"diffuse") ;          
+		specular = glGetUniformLocation(shaderprogram,"specular") ; 
+		emission = glGetUniformLocation(shaderprogram,"emission") ; 
+		shininess = glGetUniformLocation(shaderprogram,"shininess") ;
+	}
+}
+
 void init() {
   
   // Set up initial position for eye, up and amount
@@ -461,7 +506,7 @@ void init() {
 	//raw.scale(0.06, 0.06, 0.06);
 	raw.scale(0.001, 0.001, 0.001);
 	//raw.translate(0.0, 1, 0.0);
-	//raw.rotate(90, vec3(0, 1, 0));
+	raw.rotate(-90, vec3(1, 0, 0));
 
 	// Initialize the stack
 	transfstack.push(mat4(1.0)) ;
@@ -473,7 +518,11 @@ void init() {
   // For now, lights and materials are set in display.  Will move to init 
   // later, per update lights
 
-    vertexshader = initshaders(GL_VERTEX_SHADER, "shaders/light.vert.glsl") ;
+	lam_vertexshader = initshaders(GL_VERTEX_SHADER, "shaders/lam_light.vert.glsl") ;
+    lam_fragmentshader = initshaders(GL_FRAGMENT_SHADER, "shaders/lam_light.frag.glsl") ;
+	lam_shaderprogram = initprogram(lam_vertexshader, lam_fragmentshader) ;
+    
+	vertexshader = initshaders(GL_VERTEX_SHADER, "shaders/light.vert.glsl") ;
     fragmentshader = initshaders(GL_FRAGMENT_SHADER, "shaders/light.frag.glsl") ;
     shaderprogram = initprogram(vertexshader, fragmentshader) ; 
     islight = glGetUniformLocation(shaderprogram,"islight") ;        
@@ -491,7 +540,7 @@ void init() {
 	diffuse = glGetUniformLocation(shaderprogram,"diffuse") ;          
 	specular = glGetUniformLocation(shaderprogram,"specular") ; 
 	emission = glGetUniformLocation(shaderprogram,"emission") ; 
-	shininess = glGetUniformLocation(shaderprogram,"shininess") ;       
+	shininess = glGetUniformLocation(shaderprogram,"shininess") ;
 }
 
 void display() {
@@ -527,6 +576,7 @@ void display() {
 		// Multiply the matrices, accounting for OpenGL and GLM.
 		sc = glm::transpose(sc) ; tr = glm::transpose(tr) ;
 		for (unsigned int i = 0; i < objects.size() ; i++) {
+			//if(i == 1) switchShader(true);
 			mat4 objMat = glm::transpose(objTransforms[i]) ;
 			mat4 transf = mv * tr * sc * objMat ;
 			glLoadMatrixf(&transf[0][0]) ; 
@@ -559,6 +609,7 @@ void display() {
 			}
 		}
 
+		//switchShader(false);
 		//obj.draw(1, 1, 0, 1);
 		raw.draw(1, 0, 0, 1);
 

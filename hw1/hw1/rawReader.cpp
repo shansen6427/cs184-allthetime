@@ -66,12 +66,19 @@ rawReader::init(const char* filename){
 void
 rawReader::draw(const float &red, const float &green, const float &blue, const float &alpha){
 	vec3 vert1, vert2, vert3;
+	vec3 veca, vecb, normal;
 	for(unsigned int m = 0; m < vertices.size(); m += 3){
 		vert1 = vertices[m];
 		vert2 = vertices[m + 1];
 		vert3 = vertices[m + 2];
+
+		veca = vec3(vert2.x - vert1.x, vert2.y - vert1.y, vert2.z - vert1.z);
+		vecb = vec3(vert3.x - vert1.x, vert3.y - vert1.y, vert3.z - vert1.z);
+		normal = glm::normalize(veca * vecb);
+
 		glBegin(GL_TRIANGLES);
 			glColor4f(red, green, blue, alpha);
+			glNormal3f(normal.x, normal.y, normal.z);
 			glVertex3f(vert1.x, vert1.y, vert1.z);
 			glVertex3f(vert2.x, vert2.y, vert2.z);
 			glVertex3f(vert3.x, vert3.y, vert3.z);
