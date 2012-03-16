@@ -90,7 +90,7 @@ rawReader::draw(const float &red, const float &green, const float &blue, const f
 		*/
 		glBegin(GL_TRIANGLES);
 			glColor4f(red, green, blue, alpha);
-			//glNormal3f(normal.x, normal.y, normal.z);
+			glNormal3f(normal.x, normal.y, normal.z);
 			glVertex3f(vert1.x, vert1.y, vert1.z);
 			glVertex3f(vert2.x, vert2.y, vert2.z);
 			glVertex3f(vert3.x, vert3.y, vert3.z);
@@ -119,13 +119,13 @@ rawReader::alt_draw(void* ambient, void* diffuse, void* specular, void* emission
 		normal = glm::normalize(veca * vecb);
 		
 		glBegin(GL_TRIANGLES);
-			glUniform4fv((GLuint)&ambient,1, amb) ; 
-			glUniform4fv((GLuint)&diffuse,1, dif) ; 
-			glUniform4fv((GLuint)&specular,1, spec) ; 
-			glUniform4fv((GLuint)&emission,1, ems) ;
-			glUniform1fv((GLuint)&shininess,1, &shn) ; 
-			glUniform1i((GLuint)&islight,false) ;
-			glUniform1i((GLuint)&isperturbed, false);
+			//glUniform4fv((GLuint)&ambient,1, amb) ; 
+			//glUniform4fv((GLuint)&diffuse,1, dif) ; 
+			//glUniform4fv((GLuint)&specular,1, spec) ; 
+			//glUniform4fv((GLuint)&emission,1, ems) ;
+			//glUniform1fv((GLuint)&shininess,1, &shn) ; 
+			//glUniform1i((GLuint)&islight,true) ;
+			//glUniform1i((GLuint)&isperturbed, false);
 			glColor4f(0.8, 0.3, 0.1, 1.0);
 			glNormal3f(normal.x, normal.y, normal.z);
 			glVertex3f(vert1.x, vert1.y, vert1.z);

@@ -74,10 +74,21 @@ void
 objReader::draw(const float &red, const float &green, const float &blue, const float &alpha){
 	std::vector<int> face;
 	vec3 vert;
+	vec3 vert1, vert2, vert3;
+	vec3 veca, vecb, normal;
 	for(unsigned int m = 0; m < faces.size(); m++){
 		face = faces[m];
+		vert1 = vertices[face[0] - 1];
+		vert2 = vertices[face[1] - 1];
+		vert3 = vertices[face[2] - 1];
+
+		veca = vec3(vert2.x - vert1.x, vert2.y - vert1.y, vert2.z - vert1.z);
+		vecb = vec3(vert3.x - vert1.x, vert3.y - vert1.y, vert3.z - vert1.z);
+		normal = glm::normalize(veca * vecb);
+		
 		glBegin(GL_POLYGON);
 			glColor4f(red, green, blue, alpha);
+			glNormal3f(normal.x, normal.y, normal.z);
 			for(unsigned int n = 0; n < face.size(); n++){
 				vert = vertices[face[n] - 1];
 				//if(m < 5) std::cout << "vert: (" << vert.x << ", " << vert.y << ", " << vert.z << ")/n";

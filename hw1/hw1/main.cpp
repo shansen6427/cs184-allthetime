@@ -963,6 +963,12 @@ void display() {
 		glTranslatef(-half_room + banister_length / 2, -stair_width / 2, 0.0f) ; // Against left wall
 		Shapes::banister(bot_banister_height, top_banister_height, banister_length, banister_thickness) ;
 
+		// make the stairs dull
+		const float no_spec[4] = {0.0, 0.0, 0.0, 1.0};
+		const float no_shn = 0;
+		glUniform4fv(specular,1,no_spec) ; 
+		glUniform1fv(shininess,1,&no_shn) ; 
+
 		// Stairs
 		glUniform4fv(diffuse, 1, gray) ;
 		glUniform4fv(ambient, 1, gray_ambi) ;
@@ -988,6 +994,10 @@ void display() {
 				glutSolidCube(1.0) ;
 			glPopMatrix() ;
 		glPopMatrix() ;
+
+		// reset specularity
+		glUniform4fv(specular,1,base_spec) ; 
+	    glUniform1fv(shininess,1,base_shin) ; 
 
 		// Second banister
 		glUniform4fv(diffuse, 1, red) ;
@@ -1366,11 +1376,11 @@ void display() {
 	}
 
 	// perturbed sphere
-	float amb[4] = {0.2, 0.2, 0.2, 1.0};
-	float dif[4] = {0.3, 0.1, 0.9, 1.0};
-	float spec[4] = {0.6, 0.6, 0.6, 1.0};
-	float ems[4] = {0.0, 0.0, 0.0, 1.0};
-	float shn = 0.5;
+	const float amb[4] = {0.2, 0.2, 0.2, 1.0};
+	const float dif[4] = {0.3, 0.1, 0.9, 1.0};
+	const float spec[4] = {0.6, 0.6, 0.6, 1.0};
+	const float ems[4] = {0.0, 0.0, 0.0, 1.0};
+	const float shn = 0.8;
 	
 	glUniform4fv(ambient,1,amb) ; 
 	glUniform4fv(diffuse,1,dif) ; 
@@ -1385,11 +1395,26 @@ void display() {
 			glutSolidSphere(0.10, 200, 200) ;
 	glPopMatrix() ;
 	
+	glUniform1i(isperturbed, true);
 
-	//switchShader(false);
-	//obj.draw(0, 0, 1, 1);
-	//raw.draw(1, 0, 0, 1);
+	obj.draw(0, 0, 1, 1);
+
+	glUniform1i(islight,true) ;
+	glUniform1i(isperturbed, true);
+
+	raw.draw(1, 0, 0, 1);
 	//raw2.draw(0, 1, 0, 1);
+	
+	/*
+	glUniform4fv(ambient,1,amb) ; 
+	glUniform4fv(diffuse,1,dif) ; 
+	glUniform4fv(specular,1,spec) ; 
+	glUniform4fv(emission,1,ems) ;
+	glUniform1fv(shininess,1,&shn) ; 
+	glUniform1i(islight,true) ;
+	glUniform1i(isperturbed, false);
+	*/
+
 	//raw.alt_draw(&ambient, &diffuse, &specular, &emission, &shininess, &islight, &isperturbed);
 
 	glutSwapBuffers();
@@ -1511,7 +1536,7 @@ void initImportObjects(){
 	obj.scale(0.5, 0.5, 0.5);
 	obj.rotate(90, vec3(1.0, 0.0, 0.0));
 	obj.rotate(180, vec3(0.0, 0.0, 1.0));
-	obj.translate(-1.0, 4.0, 0.55);
+	obj.translate(-0.7, 4.0, 0.55);
 
 	// initialize .raw reader
 	raw.init("guy.raw");
