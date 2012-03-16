@@ -14,6 +14,9 @@ uniform int islight ; // are we lighting.
 
 uniform int isperturbed; // perturb normals?
 
+uniform sampler2D tex ; 
+uniform int istex ;
+
 //OREO
 uniform vec4 lightposn[10] ;
 uniform vec4 lightcolor[10] ;
@@ -61,8 +64,11 @@ vec4 ComputeLight (const in vec3 direction, const in vec4 lightcolor, const in v
 
 void main (void) 
 {       
-    if (islight == 0) gl_FragColor = color ; 
+	// if (istex > 0) gl_FragColor = texture2D(tex, gl_TexCoord[0].st) ;
+    if (islight == 0) gl_FragColor = ambient ; 
     else { 
+		vec4 new_diffuse ;
+		if (istex > 0) new_diffuse = texture2D(tex, gl_TexCoord[0].st) ;
         // They eye is always at (0,0,0) looking down -z axis 
         // Also compute current fragment position and direction to eye 
 
@@ -107,6 +113,9 @@ void main (void)
 				direction = normalize(position - mypos) ;
 			}
 			halfAngle = normalize(direction + eyedirn) ;
+			if (istex > 0)
+			col0 = ComputeLight(direction, thisColor, normal, halfAngle, new_diffuse, specular, shininess) ;
+			else
 			col0 = ComputeLight(direction, thisColor, normal, halfAngle, diffuse, specular, shininess) ;
 		}
 		if (lightcount > 1) {
@@ -118,7 +127,10 @@ void main (void)
 				position = thisPos.xyz / thisPos.w ;
 				direction = normalize(position - mypos) ;
 			}
-			halfAngle = normalize(direction + eyedirn) ;
+			halfAngle = normalize(direction + eyedirn) ;if (istex > 0)
+			if (istex > 0)
+			col1 = ComputeLight(direction, thisColor, normal, halfAngle, new_diffuse, specular, shininess) ;
+			else
 			col1 = ComputeLight(direction, thisColor, normal, halfAngle, diffuse, specular, shininess) ;
 		}
 		if (lightcount > 2) {
@@ -131,6 +143,9 @@ void main (void)
 				direction = normalize(position - mypos) ;
 			}
 			halfAngle = normalize(direction + eyedirn) ;
+			if (istex > 0)
+			col2 = ComputeLight(direction, thisColor, normal, halfAngle, new_diffuse, specular, shininess) ;
+			else
 			col2 = ComputeLight(direction, thisColor, normal, halfAngle, diffuse, specular, shininess) ;
 		}
 		if (lightcount > 3) {
@@ -143,6 +158,9 @@ void main (void)
 				direction = normalize(position - mypos) ;
 			}
 			halfAngle = normalize(direction + eyedirn) ;
+			if (istex > 0)
+			col3 = ComputeLight(direction, thisColor, normal, halfAngle, new_diffuse, specular, shininess) ;
+			else
 			col3 = ComputeLight(direction, thisColor, normal, halfAngle, diffuse, specular, shininess) ;
 		}
 		if (lightcount > 4) {
@@ -155,6 +173,9 @@ void main (void)
 				direction = normalize(position - mypos) ;
 			}
 			halfAngle = normalize(direction + eyedirn) ;
+			if (istex > 0)
+			col4 = ComputeLight(direction, thisColor, normal, halfAngle, new_diffuse, specular, shininess) ;
+			else
 			col4 = ComputeLight(direction, thisColor, normal, halfAngle, diffuse, specular, shininess) ;
 		}
 		if (lightcount > 5) {
@@ -167,6 +188,9 @@ void main (void)
 				direction = normalize(position - mypos) ;
 			}
 			halfAngle = normalize(direction + eyedirn) ;
+			if (istex > 0)
+			col5 = ComputeLight(direction, thisColor, normal, halfAngle, new_diffuse, specular, shininess) ;
+			else
 			col5 = ComputeLight(direction, thisColor, normal, halfAngle, diffuse, specular, shininess) ;
 		}
 		if (lightcount > 6) {
@@ -179,6 +203,9 @@ void main (void)
 				direction = normalize(position - mypos) ;
 			}
 			halfAngle = normalize(direction + eyedirn) ;
+			if (istex > 0)
+			col6 = ComputeLight(direction, thisColor, normal, halfAngle, new_diffuse, specular, shininess) ;
+			else
 			col6 = ComputeLight(direction, thisColor, normal, halfAngle, diffuse, specular, shininess) ;
 		}
 		if (lightcount > 7) {
@@ -191,6 +218,9 @@ void main (void)
 				direction = normalize(position - mypos) ;
 			}
 			halfAngle = normalize(direction + eyedirn) ;
+			if (istex > 0)
+			col7 = ComputeLight(direction, thisColor, normal, halfAngle, new_diffuse, specular, shininess) ;
+			else
 			col7 = ComputeLight(direction, thisColor, normal, halfAngle, diffuse, specular, shininess) ;
 		}
 		if (lightcount > 8) {
@@ -203,6 +233,9 @@ void main (void)
 				direction = normalize(position - mypos) ;
 			}
 			halfAngle = normalize(direction + eyedirn) ;
+			if (istex > 0)
+			col8 = ComputeLight(direction, thisColor, normal, halfAngle, new_diffuse, specular, shininess) ;
+			else
 			col8 = ComputeLight(direction, thisColor, normal, halfAngle, diffuse, specular, shininess) ;
 		}
 		if (lightcount > 9) {
@@ -215,10 +248,14 @@ void main (void)
 				direction = normalize(position - mypos) ;
 			}
 			halfAngle = normalize(direction + eyedirn) ;
+			if (istex > 0)
+			col9 = ComputeLight(direction, thisColor, normal, halfAngle, new_diffuse, specular, shininess) ;
+			else
 			col9 = ComputeLight(direction, thisColor, normal, halfAngle, diffuse, specular, shininess) ;
 		}
 
         gl_FragColor = ambient + emission + col0 + col1 + col2 + col3 + col4 + col5 + col6 + col7 + col8 + col9 ;
-		
+		// if (istex > 0) gl_FragColor = (gl_FragColor + texture2D(tex, gl_TexCoord[0].st)) / 2 ;
+
         }
 }

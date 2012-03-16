@@ -15,7 +15,7 @@ typedef glm::mat3 mat3 ;
 typedef glm::mat4 mat4 ; 
 typedef glm::vec3 vec3 ; 
 typedef glm::vec4 vec4 ; 
-const float pi = 3.14159265 ; // For portability across platforms
+const float pi = 3.14159265f ; // For portability across platforms
 
 
 class Transform  
@@ -30,6 +30,7 @@ public:
 	static void zoom(float dist, vec3& eye, vec3& center);
 	// MICE
 	// CONTROL
+	static void centeralign(vec3 eye, vec3 move_center, vec3& center, vec3& up, float speed);
 	static void moveleft(float degrees, vec3 eye, vec3& move_center);
 	// CONTROL
 	static void up(float degrees, vec3& eye, vec3& center, vec3& up);

@@ -5,12 +5,12 @@
 
 # Set the scene size and camera location 
 size 500 500
-camera 0 -2 2 0 0 0 0 1 1 30.0
+camera 0 -2 1 0 2 1 0 0 1 30.0
 
 # lights.  A single point and directional light
 # Note that your program must support up to 10 lights
 light 0.6 0 0.1 0 1 0.5 0 1  
-light 0 -0.6 0.1 1 0.5 0.5 1 1 
+light 0 -0.6 0.1 1 0.5 0.5 1 1
 
 # I do a global transform to move this down a little 
 # A good use of matrix stacks and hierarchy 
@@ -37,6 +37,41 @@ translate 0 0 -0.2
   pushTransform
         scale 1.0 1.0 0.025 
         cube 1.0 
+  popTransform
+
+  pushTransform
+        scale 0.025 1.0 1.0
+        cube 1.0
+  popTransform
+
+  pushTransform
+        translate 0 0 0.2
+		translate 0 -2 0
+		cube 1.0
+		pushTransform
+		    translate 0 0 4
+		    cube 1.0
+		popTransform
+
+		pushTransform
+			translate 0 2 2
+			cube 0.5
+		popTransform
+
+		pushTransform
+			translate 0 -2 2
+			cube 0.5
+		popTransform
+
+		pushTransform
+			translate 2 0 2
+			cube 0.5
+		popTransform
+
+		pushTransform
+			translate -2 0 2
+			cube 0.5
+		popTransform
   popTransform
 
 # Pillar 1 

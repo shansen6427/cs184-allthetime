@@ -12,4 +12,5 @@ public:
 	QPrint();
 	virtual ~QPrint();
 	static void v3p(std::string msg, glm::vec3 input);
+	static float magv(glm::vec3 input);
 };
