@@ -22,4 +22,5 @@ public:
 	static void printW() ;
 	static void cube(float size) ;
 	static void plane(float length, float width, int orientation) ;
+	static void banister(float bot_height, float top_height, float length, float thickness) ;
 };

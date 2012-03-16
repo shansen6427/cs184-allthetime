@@ -389,40 +389,64 @@ void Shapes::printW() {
 void Shapes::cube(float size) {
 	float len = size / 2 ;
 	glBegin(GL_QUADS) ;
-		glNormal3f(0.0, 0.0, 1.0) ; // Top
+		// Top
+		glNormal3f(0.0, 0.0, 1.0) ; 
 		glTexCoord2f(0.0f, 0.0f) ; glVertex3f(-len, -len,  len) ;
+		glNormal3f(0.0, 0.0, 1.0) ; 
 		glTexCoord2f(1.0f, 0.0f) ; glVertex3f( len, -len,  len) ;
+		glNormal3f(0.0, 0.0, 1.0) ; 
 		glTexCoord2f(1.0f, 1.0f) ; glVertex3f( len,  len,  len) ;
+		glNormal3f(0.0, 0.0, 1.0) ; 
 		glTexCoord2f(0.0f, 1.0f) ; glVertex3f(-len,  len,  len) ;
 
-		glNormal3f(0.0, 0.0, -1.0) ; // Bottom
+		// Bottom
+		glNormal3f(0.0, 0.0, -1.0) ; 
 		glTexCoord2f(0.0f, 0.0f) ; glVertex3f(-len, -len,  -len) ;
+		glNormal3f(0.0, 0.0, -1.0) ; 
 		glTexCoord2f(1.0f, 0.0f) ; glVertex3f( len, -len,  -len) ;
+		glNormal3f(0.0, 0.0, -1.0) ; 
 		glTexCoord2f(1.0f, 1.0f) ; glVertex3f( len,  len,  -len) ;
+		glNormal3f(0.0, 0.0, -1.0) ; 
 		glTexCoord2f(0.0f, 1.0f) ; glVertex3f(-len,  len,  -len) ;
 
-		glNormal3f(0.0, -1.0, 0.0) ; // Front
+		// Front
+		glNormal3f(0.0, -1.0, 0.0) ; 
 		glTexCoord2f(0.0f, 0.0f) ; glVertex3f(-len, -len,  -len) ;
+		glNormal3f(0.0, -1.0, 0.0) ; 
 		glTexCoord2f(1.0f, 0.0f) ; glVertex3f( len, -len,  -len) ;
+		glNormal3f(0.0, -1.0, 0.0) ; 
 		glTexCoord2f(1.0f, 1.0f) ; glVertex3f( len, -len,  len) ;
+		glNormal3f(0.0, -1.0, 0.0) ; 
 		glTexCoord2f(0.0f, 1.0f) ; glVertex3f(-len, -len,  len) ;
 
-		glNormal3f(0.0, 1.0, 0.0) ; // Back
+		// Back
+		glNormal3f(0.0, 1.0, 0.0) ; 
 		glTexCoord2f(0.0f, 0.0f) ; glVertex3f(-len, len,  -len) ;
+		glNormal3f(0.0, 1.0, 0.0) ; 
 		glTexCoord2f(1.0f, 0.0f) ; glVertex3f( len, len,  -len) ;
+		glNormal3f(0.0, 1.0, 0.0) ; 
 		glTexCoord2f(1.0f, 1.0f) ; glVertex3f( len, len,  len) ;
+		glNormal3f(0.0, 1.0, 0.0) ; 
 		glTexCoord2f(0.0f, 1.0f) ; glVertex3f(-len, len,  len) ;
 
-		glNormal3f(-1.0, 0.0, 0.0) ; // Side
+		// Side
+		glNormal3f(-1.0, 0.0, 0.0) ; 
 		glTexCoord2f(0.0f, 0.0f) ; glVertex3f(-len, -len,  -len) ;
+		glNormal3f(-1.0, 0.0, 0.0) ; 
 		glTexCoord2f(1.0f, 0.0f) ; glVertex3f(-len, len,  -len) ;
+		glNormal3f(-1.0, 0.0, 0.0) ; 
 		glTexCoord2f(1.0f, 1.0f) ; glVertex3f(-len, len,  len) ;
+		glNormal3f(-1.0, 0.0, 0.0) ; 
 		glTexCoord2f(0.0f, 1.0f) ; glVertex3f(-len, -len,  len) ;
 
-		glNormal3f(1.0, 0.0, 0.0) ; // Side
+		// Side
+		glNormal3f(1.0, 0.0, 0.0) ; 
 		glTexCoord2f(0.0f, 0.0f) ; glVertex3f(len, -len,  -len) ;
+		glNormal3f(1.0, 0.0, 0.0) ; 
 		glTexCoord2f(1.0f, 0.0f) ; glVertex3f(len, len,  -len) ;
+		glNormal3f(1.0, 0.0, 0.0) ; 
 		glTexCoord2f(1.0f, 1.0f) ; glVertex3f(len, len,  len) ;
+		glNormal3f(1.0, 0.0, 0.0) ; 
 		glTexCoord2f(0.0f, 1.0f) ; glVertex3f(len, -len,  len) ;
 
 	glEnd() ;
@@ -430,6 +454,7 @@ void Shapes::cube(float size) {
 
 void Shapes::plane(float length, float width, int orientation) {
 	float repeat_factor = 10.0f ; // For floor and ceiling
+	float dir = 0.0f ;
 	glBegin(GL_QUADS) ;
 		// 1 up, 2 down, 3 front, 4 back, 5 right, 6 left
 		float xcoord, ycoord, zcoord ;
@@ -437,55 +462,140 @@ void Shapes::plane(float length, float width, int orientation) {
 			xcoord = length / 2 ;
 			ycoord = width / 2 ;
 			zcoord = 0.0f ;
-			glNormal3f(0.0f, 0.0f, 1.0f) ; 
+			dir = 1.0f ;
 		} else if (orientation == 2) {
 			xcoord = -length / 2 ;
 			ycoord = width / 2 ;
 			zcoord = 0.0f ;
-			glNormal3f(0.0f, 0.0f, -1.0f) ;
+			dir = -1.0f ;
 		} else if (orientation == 3) {
 			xcoord = length / 2 ;
 			ycoord = 0.0f ;
 			zcoord = width / 2 ;
-			glNormal3f(0.0f, -1.0f, 0.0f) ;
+			dir = -1.0f ;
 		} else if (orientation == 4) {
 			xcoord = -length / 2 ;
 			ycoord = 0.0f ;
 			zcoord = width / 2 ;
-			glNormal3f(0.0f, 1.0f, 0.0f) ;
+			dir = 1.0f ;
 		} else if (orientation == 5) {
 			xcoord = 0.0f ;
 			ycoord = length / 2 ;
 			zcoord = width / 2 ;
-			glNormal3f(1.0f, 0.0f, 0.0f) ;
+			dir = 1.0f ;
 		} else if (orientation == 6) {
 			xcoord = 0.0f ;
 			ycoord = -length / 2 ;
 			zcoord = width / 2 ;
-			glNormal3f(-1.0f, 0.0f, 0.0f) ;
+			dir = -1.0f ;
 		}
 		if (zcoord == 0.0f) {
+			glNormal3f(0.0f, 0.0f, dir) ;
 			glTexCoord2f(0.0f, 0.0f) ; glVertex3f(-xcoord, ycoord, 0.0f) ;
+			glNormal3f(0.0f, 0.0f, dir) ;
 			glTexCoord2f(repeat_factor, 0.0f) ; glVertex3f(xcoord, ycoord, 0.0f) ;
+			glNormal3f(0.0f, 0.0f, dir) ;
 			glTexCoord2f(repeat_factor, repeat_factor) ; glVertex3f(xcoord, -ycoord, 0.0f) ;
+			glNormal3f(0.0f, 0.0f, dir) ;
 			glTexCoord2f(0.0f, repeat_factor) ; glVertex3f(-xcoord, -ycoord, 0.0f) ;
 		} else if (ycoord == 0.0f) {
+			glNormal3f(0.0f, dir, 0.0f) ;
 			glTexCoord2f(0.0f, 0.0f) ; glVertex3f(-xcoord, 0.0f, zcoord) ;
+			glNormal3f(0.0f, dir, 0.0f) ;
 			glTexCoord2f(1.0f, 0.0f) ; glVertex3f(xcoord, 0.0f, zcoord) ;
+			glNormal3f(0.0f, dir, 0.0f) ;
 			glTexCoord2f(1.0f, 1.0f) ; glVertex3f(xcoord, 0.0f, -zcoord) ;
+			glNormal3f(0.0f, dir, 0.0f) ;
 			glTexCoord2f(0.0f, 1.0f) ; glVertex3f(-xcoord, 0.0f, -zcoord) ;
 		} else if (xcoord == 0.0f) {
+			glNormal3f(dir, 0.0f, 0.0f) ;
 			glTexCoord2f(0.0f, 0.0f) ; glVertex3f(0.0f, -ycoord, zcoord) ;
+			glNormal3f(dir, 0.0f, 0.0f) ;
 			glTexCoord2f(1.0f, 0.0f) ; glVertex3f(0.0f, ycoord, zcoord) ;
+			glNormal3f(dir, 0.0f, 0.0f) ;
 			glTexCoord2f(1.0f, 1.0f) ; glVertex3f(0.0f, ycoord, -zcoord) ;
+			glNormal3f(dir, 0.0f, 0.0f) ;
 			glTexCoord2f(0.0f, 1.0f) ; glVertex3f(0.0f, -ycoord, -zcoord) ;
 		}
 	glEnd() ;
 }
 
+void Shapes::banister(float bot_height, float top_height, float length, float thickness) {
+	float slope = (top_height - bot_height) / -length ;
+	float y = 0.0f ; // Parallel to y-axis by construction
+	float x, z ;
+	if (slope == 0.0f) {
+		x = 0.0f ;
+		z = 1.0f ;
+	} else {
+		float recip = - 1 / slope ;
+		float mag = sqrt(pow(recip, 2) + 1.0f) ;
+		x = 1 / mag ;
+		z = recip / mag ;
+	}
+	float bh = bot_height ;
+	float th = top_height ;
+	float l = length / 2 ;
+	float t = thickness / 2 ;
+	
+	glBegin(GL_QUADS) ;
+		// Front side
+		glNormal3f(0.0f, -1.0f, 0.0f) ;
+		glVertex3f(-l, -t, 0.0f) ;
+		glNormal3f(0.0f, -1.0f, 0.0f) ;
+		glVertex3f(l, -t, 0.0f) ;
+		glNormal3f(0.0f, -1.0f, 0.0f) ;
+		glVertex3f(l, -t, bh) ;
+		glNormal3f(0.0f, -1.0f, 0.0f) ;
+		glVertex3f(-l, -t, th) ;
+	
+		// Back side
+		glNormal3f(0.0f, 1.0f, 0.0f) ;
+		glVertex3f(-l, t, 0.0f) ;
+		glNormal3f(0.0f, 1.0f, 0.0f) ;
+		glVertex3f(l, t, 0.0f) ;
+		glNormal3f(0.0f, 1.0f, 0.0f) ;
+		glVertex3f(l, t, bh) ;
+		glNormal3f(0.0f, 1.0f, 0.0f) ;
+		glVertex3f(-l, t, th) ;
+
+		// Right strip
+		glNormal3f(1.0f, 0.0f, 0.0f) ;
+		glVertex3f(l, -t, 0.0f) ;
+		glNormal3f(1.0f, 0.0f, 0.0f) ;
+		glVertex3f(l, t, 0.0f) ;
+		glNormal3f(1.0f, 0.0f, 0.0f) ;
+		glVertex3f(l, t, bh) ;
+		glNormal3f(1.0f, 0.0f, 0.0f) ;
+		glVertex3f(l, -t, bh) ;
+
+		// Top strip
+		glNormal3f(x, y, z) ;
+		glVertex3f(l, -t, bh) ;
+		glNormal3f(x, y, z) ;
+		glVertex3f(l, t, bh) ;
+		glNormal3f(x, y, z) ;
+		glVertex3f(-l, t, th) ;
+		glNormal3f(x, y, z) ;
+		glVertex3f(-l, -t, th) ;
+
+		// Back strip
+		glNormal3f(-1.0f, 0.0f, 0.0f) ;
+		glVertex3f(-l, -t, 0.0f) ;
+		glNormal3f(-1.0f, 0.0f, 0.0f) ;
+		glVertex3f(-l, t, 0.0f) ;
+		glNormal3f(-1.0f, 0.0f, 0.0f) ;
+		glVertex3f(-l, t, th) ;
+		glNormal3f(-1.0f, 0.0f, 0.0f) ;
+		glVertex3f(-l, -t, th) ;
+
+	glEnd() ;
+
+}
+
 Shapes::Shapes()
 {
-	// 
+
 }
 
 Shapes::~Shapes()

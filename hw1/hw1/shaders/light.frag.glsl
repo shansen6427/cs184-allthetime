@@ -46,7 +46,7 @@ vec4 ComputeLight (const in vec3 direction, const in vec4 lightcolor, const in v
 void main (void) 
 {       
 	// if (istex > 0) gl_FragColor = texture2D(tex, gl_TexCoord[0].st) ;
-    if (islight == 0) gl_FragColor = color ; 
+    if (islight == 0) gl_FragColor = ambient ; 
     else { 
 		vec4 new_diffuse ;
 		if (istex > 0) new_diffuse = texture2D(tex, gl_TexCoord[0].st) ;
