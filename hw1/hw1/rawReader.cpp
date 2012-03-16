@@ -23,6 +23,8 @@ int
 rawReader::init(const char* filename){
 	std::string str = "" ; 
 	
+	plint = true;
+
 	// open .raw file
 	std::cout << "Reading .raw file " << filename << std::endl;
     std::ifstream in ; 
@@ -52,6 +54,8 @@ rawReader::init(const char* filename){
 			vertices.push_back(vertex3);
 		} 
 	}
+	
+	calculateNormals();
 
 	std::cout << ".raw file read successful" << std::endl;
 	return 0;
@@ -68,7 +72,9 @@ void
 rawReader::draw(const float &red, const float &green, const float &blue, const float &alpha){
 	vec3 vert1, vert2, vert3;
 	vec3 veca, vecb, normal;
+	int n = 0;
 	for(unsigned int m = 0; m < vertices.size(); m += 3){
+		
 		vert1 = vertices[m];
 		vert2 = vertices[m + 1];
 		vert3 = vertices[m + 2];
@@ -76,15 +82,22 @@ rawReader::draw(const float &red, const float &green, const float &blue, const f
 		veca = vec3(vert2.x - vert1.x, vert2.y - vert1.y, vert2.z - vert1.z);
 		vecb = vec3(vert3.x - vert1.x, vert3.y - vert1.y, vert3.z - vert1.z);
 		normal = glm::normalize(veca * vecb);
-
+		
+		/*
+		if(m <= 15 && plint) std::cout << "calculated normal: (" << normal.x << ", " << normal.y << ", " << normal.z << ")\n";
+		normal = normals[n++];
+		if(m <= 15&& plint) std::cout << "vector normal: (" << normal.x << ", " << normal.y << ", " << normal.z << ")\n";
+		*/
 		glBegin(GL_TRIANGLES);
 			glColor4f(red, green, blue, alpha);
-			glNormal3f(normal.x, normal.y, normal.z);
+			//glNormal3f(normal.x, normal.y, normal.z);
 			glVertex3f(vert1.x, vert1.y, vert1.z);
 			glVertex3f(vert2.x, vert2.y, vert2.z);
 			glVertex3f(vert3.x, vert3.y, vert3.z);
 		glEnd();
 	}
+
+	plint = false;
 }
 
 void
@@ -104,17 +117,16 @@ rawReader::alt_draw(void* ambient, void* diffuse, void* specular, void* emission
 		veca = vec3(vert2.x - vert1.x, vert2.y - vert1.y, vert2.z - vert1.z);
 		vecb = vec3(vert3.x - vert1.x, vert3.y - vert1.y, vert3.z - vert1.z);
 		normal = glm::normalize(veca * vecb);
-
-		glUniform4fv((GLuint)&ambient,1, amb) ; 
-		glUniform4fv((GLuint)&diffuse,1, dif) ; 
-		glUniform4fv((GLuint)&specular,1, spec) ; 
-		glUniform4fv((GLuint)&emission,1, ems) ;
-		glUniform1fv((GLuint)&shininess,1, &shn) ; 
-		glUniform1i((GLuint)&islight,true) ;
-		glUniform1i((GLuint)&isperturbed, false);
-
+		
 		glBegin(GL_TRIANGLES);
-			//glColor4f(0.8, 0.3, 0.1, 1.0);
+			glUniform4fv((GLuint)&ambient,1, amb) ; 
+			glUniform4fv((GLuint)&diffuse,1, dif) ; 
+			glUniform4fv((GLuint)&specular,1, spec) ; 
+			glUniform4fv((GLuint)&emission,1, ems) ;
+			glUniform1fv((GLuint)&shininess,1, &shn) ; 
+			glUniform1i((GLuint)&islight,false) ;
+			glUniform1i((GLuint)&isperturbed, false);
+			glColor4f(0.8, 0.3, 0.1, 1.0);
 			glNormal3f(normal.x, normal.y, normal.z);
 			glVertex3f(vert1.x, vert1.y, vert1.z);
 			glVertex3f(vert2.x, vert2.y, vert2.z);
@@ -154,9 +166,12 @@ void
 rawReader::rotate(const float degrees, const vec3& axis)
 {
 	mat3 R = Transform::rotate(degrees, axis);
+
 	for(unsigned int m = 0; m < vertices.size(); m++){
 		vertices[m] = vertices[m] * R;
 	}
+
+	calculateNormals();
 }
 
 void
@@ -178,5 +193,23 @@ rawReader::translate(const float &tx, const float &ty, const float &tz){
 		hom_vertice = vec4(vertices[m].x, vertices[m].y, vertices[m].z, 1.0);
 		hom_vertice = hom_vertice * T;
 		vertices[m] = vec3(hom_vertice.x / hom_vertice.w, hom_vertice.y / hom_vertice.w, hom_vertice.z / hom_vertice.w);
+	}
+}
+
+void
+rawReader::calculateNormals(){
+	normals.clear();
+
+	// populate normals vector
+	vec3 vert1, vert2, vert3;
+	vec3 veca, vecb;
+	for(unsigned int n = 0; n < vertices.size(); n += 3){
+		vert1 = vertices[n];
+		vert2 = vertices[n + 1];
+		vert3 = vertices[n + 2];
+
+		veca = vec3(vert2.x - vert1.x, vert2.y - vert1.y, vert2.z - vert1.z);
+		vecb = vec3(vert3.x - vert1.x, vert3.y - vert1.y, vert3.z - vert1.z);
+		normals.push_back(glm::normalize(veca * vecb));
 	}
 }

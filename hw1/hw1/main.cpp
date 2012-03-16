@@ -125,7 +125,8 @@ const float low_spec[4] = {0.1, 0.1, 0.1, 1.0} ;
 
 // Keyboard and mouse variables
 const vec3 worldUp = vec3(0.0, 0.0, 1.0) ;
-const float viscosity = 50.0f ; // Constant scale factor for movement
+//const float viscosity = 50.0f ; // Constant scale factor for movement
+const float viscosity = 10.0f ; // Constant scale factor for movement
 const float move_amount = 0.6f / viscosity ;
 const float turn_amount = -10.0f / viscosity ; // Negative due to the way rotation works
 const float jump_amount = 2.0f / viscosity ;
@@ -220,7 +221,7 @@ GLubyte stuccotexture[160][160][3] ;
 
 // file variables
 objReader obj;
-rawReader raw;
+rawReader raw, raw2;
 
 /**
  * Transforms INPUT by modelview matrix and returns OUTPUT.
@@ -1017,6 +1018,7 @@ void display() {
 
 	glLoadMatrixf(&mv[0][0]) ;
 	// Upper base
+
 	glUniform4fv(diffuse, 1, base_gray) ;
 	glUniform4fv(ambient, 1, gray_ambi) ;
 	glPushMatrix() ;
@@ -1091,6 +1093,8 @@ void display() {
 		}
 	glEnd() ;
 
+	switchShader(true);
+
 	// Outer edge
 	glBegin(GL_QUAD_STRIP) ;
 		for (int i = desk_angle1; i <= desk_angle2; i++) {
@@ -1101,6 +1105,8 @@ void display() {
 			glVertex3f(desk_outer * cos(theta), desk_outer * sin(theta), desk_height) ;
 		}
 	glEnd() ;
+
+	switchShader(false);
 
 	// Desk top
 	glBegin(GL_QUAD_STRIP) ;
@@ -1359,9 +1365,31 @@ void display() {
 		}
 	}
 
+	// perturbed sphere
+	float amb[4] = {0.2, 0.2, 0.2, 1.0};
+	float dif[4] = {0.3, 0.1, 0.9, 1.0};
+	float spec[4] = {0.6, 0.6, 0.6, 1.0};
+	float ems[4] = {0.0, 0.0, 0.0, 1.0};
+	float shn = 0.5;
+	
+	glUniform4fv(ambient,1,amb) ; 
+	glUniform4fv(diffuse,1,dif) ; 
+	glUniform4fv(specular,1,spec) ; 
+	glUniform4fv(emission,1,ems) ;
+	glUniform1fv(shininess,1,&shn) ; 
+	glUniform1i(islight,true) ;
+	glUniform1i(isperturbed, true);
+			
+	glPushMatrix() ;
+			glTranslatef(1.90, -1.5, 0.5) ;
+			glutSolidSphere(0.10, 200, 200) ;
+	glPopMatrix() ;
+	
+
 	//switchShader(false);
-	//obj.draw(1, 1, 0, 1);
+	//obj.draw(0, 0, 1, 1);
 	//raw.draw(1, 0, 0, 1);
+	//raw2.draw(0, 1, 0, 1);
 	//raw.alt_draw(&ambient, &diffuse, &specular, &emission, &shininess, &islight, &isperturbed);
 
 	glutSwapBuffers();
@@ -1478,16 +1506,25 @@ void initShaders() {
 
 void initImportObjects(){
 	// initialize .obj reader
-	//obj.init("Anubis_alienado.obj");
-	//obj.moveToCenter();
-	//obj.scale(2.0, 2.0, 2.0);
-	//obj.translate(0.0, 0.5, 0.0);
+	obj.init("Anubis_alienado.obj");
+	obj.moveToCenter();
+	obj.scale(0.5, 0.5, 0.5);
+	obj.rotate(90, vec3(1.0, 0.0, 0.0));
+	obj.rotate(180, vec3(0.0, 0.0, 1.0));
+	obj.translate(-1.0, 4.0, 0.55);
 
 	// initialize .raw reader
 	raw.init("guy.raw");
 	raw.moveToCenter();
-	raw.scale(0.001, 0.001, 0.001);
-	raw.rotate(-90, vec3(1, 0, 0));
+	raw.scale(0.00022, 0.00022, 0.00022);
+	//raw.rotate(90, vec3(1, 0, 0));
+	raw.translate(1.8, -2.9, 0.77);
+
+	//raw2.init("guy.raw");
+	//raw2.moveToCenter();
+	//raw2.scale(0.00022, 0.00022, 0.00022);
+	//raw.rotate(90, vec3(1, 0, 0));
+	//raw2.translate(2, -2, 0.7);
 }
 
 /**

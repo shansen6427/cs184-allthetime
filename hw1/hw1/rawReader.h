@@ -20,5 +20,8 @@ public:
     void scale(const float &sx, const float &sy, const float &sz) ; 
     void translate(const float &tx, const float &ty, const float &tz);
 private:
+	void calculateNormals();
+	bool plint;
 	std::vector<vec3> vertices;
+	std::vector<vec3> normals;
 };
